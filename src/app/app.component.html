@@ -1,5 +1,6 @@
 <div [formGroup]="form">
   <mat-card>
+
     <mat-form-field>
       <mat-label>Name</mat-label>
       <input matInput [formControl]="name">
@@ -8,8 +9,9 @@
 
     <mat-form-field>
       <mat-label>Time</mat-label>
-      <app-time-input [formControl]="time"></app-time-input>
+      <app-time-input [formControl]="time" ></app-time-input>
       <mat-error *ngIf="time.invalid">{{getTimeErrorMessage()}}</mat-error>
     </mat-form-field>
+
   </mat-card>
 </div>

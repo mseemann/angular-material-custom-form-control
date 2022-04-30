@@ -4,6 +4,12 @@ import {MatFormField, MatFormFieldControl} from "@angular/material/form-field";
 import {Subject} from "rxjs";
 import {BooleanInput, coerceBooleanProperty} from "@angular/cdk/coercion";
 
+type Parts = {
+  hours: string,
+  minutes: string,
+  twelveHourPeriods: string
+}
+
 @Component({
   selector: 'app-time-input',
   templateUrl: './time-input.component.html',
@@ -30,9 +36,6 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
 
   autofilled: boolean = false;
 
-  onChange = (_: any) => {};
-  onTouched = () => {};
-
   constructor(
     @Optional() @Self() public ngControl: NgControl | null,
     private elementRef: ElementRef,
@@ -47,14 +50,16 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     return this.focused || !this.empty;
   }
 
+  protected _required: boolean | undefined;
+
   @Input()
   get required(): boolean {
     return this._required ?? this.ngControl?.control?.hasValidator(Validators.required) ?? false;
   }
+
   set required(value: BooleanInput) {
     this._required = coerceBooleanProperty(value);
   }
-  protected _required: boolean | undefined;
 
   private _disabled = false;
 
@@ -70,7 +75,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   }
 
   get errorState(): boolean {
-    return this.parts.invalid && this.touched;
+    return (this.ngControl?.invalid || this.parts.invalid) && this.touched;
   }
 
   private _placeholder: string = '';
@@ -87,7 +92,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
 
   @Input()
   get value(): string | null {
-    let n = this.parts.value;
+    let n: Parts = this.parts.value;
     if (n.hours.length == 2 && n.minutes.length == 2 && n.twelveHourPeriods.length == 2) {
       return `${n.hours}:${n.minutes} ${n.twelveHourPeriods}`;
     }
@@ -95,14 +100,20 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   }
 
   set value(time: string | null) {
-    this.parts.setValue({hours: '00', minutes: '00', twelveHourPeriods: 'AM'});
+    this.parts.setValue({hours: '', minutes: '', twelveHourPeriods: ''} as Parts);
     this.stateChanges.next();
   }
 
   get empty() {
-    let n = this.parts.value;
+    let n: Parts = this.parts.value;
     return !n.minutes && !n.hours && !n.twelveHourPeriods;
   }
+
+  onChange = (_: any) => {
+  };
+
+  onTouched = () => {
+  };
 
   onFocusIn(event: FocusEvent) {
     if (!this.focused) {

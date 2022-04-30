@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import {Component} from '@angular/core';
 import {FormControl, FormGroup, Validators} from "@angular/forms";
 
 @Component({
@@ -12,7 +12,7 @@ export class AppComponent {
   form = new FormGroup({name: this.name, time: this.time})
 
   constructor() {
-    this.form.valueChanges.subscribe((value)=>{
+    this.form.valueChanges.subscribe((value) => {
       console.log(value)
     })
   }
