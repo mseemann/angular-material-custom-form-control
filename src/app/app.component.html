@@ -1,1 +1,9 @@
-<div></div>
+<div [formGroup]="form">
+  <mat-card>
+    <mat-form-field>
+      <mat-label>Name</mat-label>
+      <input matInput [formControl]="name">
+      <mat-error *ngIf="name.invalid">{{getErrorMessage()}}</mat-error>
+    </mat-form-field>
+  </mat-card>
+</div>
