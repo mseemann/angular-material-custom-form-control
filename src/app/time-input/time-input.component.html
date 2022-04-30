@@ -1,0 +1,11 @@
+<div role="group" [formGroup]="parts" [attr.aria-describedby]="userAriaDescribedBy"
+     [attr.aria-labelledby]="parentFormField?.getLabelId()"
+     class="app-time-input-container"
+     (focusin)="onFocusIn($event)"
+     (focusout)="onFocusOut($event)">
+  <input class="hours" [formControl]="hours" maxlength="2" size="2" (input)="handleInput(hours)">
+  <span>:</span>
+  <input class="minutes" [formControl]="minutes" maxlength="2" size="2" (input)="handleInput(minutes)">
+  <span>&nbsp;</span>
+  <input class="twelveHourPeriods" [formControl]="twelveHourPeriods" maxlength="2" size="2" (input)="handleInput(twelveHourPeriods)">
+</div>

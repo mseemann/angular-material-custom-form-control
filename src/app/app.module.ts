@@ -7,10 +7,12 @@ import {MAT_FORM_FIELD_DEFAULT_OPTIONS, MatFormFieldModule} from "@angular/mater
 import {MatInputModule} from "@angular/material/input";
 import {MatCardModule} from "@angular/material/card";
 import {ReactiveFormsModule} from "@angular/forms";
+import { TimeInputComponent } from './time-input/time-input.component';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    TimeInputComponent
   ],
   imports: [
     BrowserModule,

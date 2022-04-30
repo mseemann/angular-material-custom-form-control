@@ -8,7 +8,8 @@ import {FormControl, FormGroup, Validators} from "@angular/forms";
 })
 export class AppComponent {
   name = new FormControl(null, Validators.required);
-  form = new FormGroup({name: this.name})
+  time = new FormControl(null, Validators.required);
+  form = new FormGroup({name: this.name, time: this.time})
 
   constructor() {
     this.form.valueChanges.subscribe((value)=>{
@@ -16,8 +17,15 @@ export class AppComponent {
     })
   }
 
-  getErrorMessage(): string {
+  getNameErrorMessage(): string {
     if (this.name.hasError('required')) {
+      return 'You must enter a value';
+    }
+    return '';
+  }
+
+  getTimeErrorMessage(): string {
+    if (this.time.hasError('required')) {
       return 'You must enter a value';
     }
     return '';

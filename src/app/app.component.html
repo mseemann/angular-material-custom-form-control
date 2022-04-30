@@ -3,7 +3,13 @@
     <mat-form-field>
       <mat-label>Name</mat-label>
       <input matInput [formControl]="name">
-      <mat-error *ngIf="name.invalid">{{getErrorMessage()}}</mat-error>
+      <mat-error *ngIf="name.invalid">{{getNameErrorMessage()}}</mat-error>
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Time</mat-label>
+      <app-time-input [formControl]="time"></app-time-input>
+      <mat-error *ngIf="time.invalid">{{getTimeErrorMessage()}}</mat-error>
     </mat-form-field>
   </mat-card>
 </div>
