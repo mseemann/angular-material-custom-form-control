@@ -1,5 +1,6 @@
 import {Component} from '@angular/core';
 import {FormControl, FormGroup, Validators} from "@angular/forms";
+import {Time24Hours} from "./types";
 
 @Component({
   selector: 'app-root',
@@ -8,12 +9,16 @@ import {FormControl, FormGroup, Validators} from "@angular/forms";
 })
 export class AppComponent {
   name = new FormControl(null, Validators.required);
-  time = new FormControl(null, Validators.required);
+  time = new FormControl({
+    hours: new Date().getHours(),
+    minutes: new Date().getMinutes()
+  } as Time24Hours, Validators.required);
   form = new FormGroup({name: this.name, time: this.time})
+  twelveHourFormat = window.navigator.language === 'en-US';
 
   constructor() {
     this.form.valueChanges.subscribe((value) => {
-      console.log(value)
+      console.log(JSON.stringify(value))
     })
   }
 

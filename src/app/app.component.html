@@ -9,7 +9,7 @@
 
     <mat-form-field>
       <mat-label>Time</mat-label>
-      <app-time-input [formControl]="time" ></app-time-input>
+      <app-time-input [formControl]="time" [twelveHourFormat]="twelveHourFormat" ></app-time-input>
       <mat-icon matSuffix>schedule</mat-icon>
       <mat-error *ngIf="time.invalid">{{getTimeErrorMessage()}}</mat-error>
     </mat-form-field>
@@ -17,4 +17,4 @@
   </mat-card>
 </div>
 
-<input type="time" id="appt" name="appt">
+<input type="time" name="appt">

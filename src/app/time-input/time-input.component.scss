@@ -16,10 +16,15 @@ input {
   }
 }
 
-span {
+.spacer {
+ display: inline-block;
+  width: .75em;
+}
+
+span, input {
   opacity: 0;
   transition: opacity 200ms;
 }
-:host.floating span {
+:host.floating span, :host.floating input {
   opacity: 1;
 }

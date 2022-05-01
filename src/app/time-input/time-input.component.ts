@@ -15,17 +15,90 @@ import {Subject} from "rxjs";
 import {BooleanInput, coerceBooleanProperty} from "@angular/cdk/coercion";
 import {Time24Hours} from "../types";
 
+const number22DigitString = (n: number): string => {
+  return n.toLocaleString("de-DE", {
+    minimumIntegerDigits: 2,
+    useGrouping: false,
+  })
+}
+
 type Parts = {
   hours: string,
   minutes: string,
-  twelveHourPeriods: string
+  twelveHourPeriods: string | null
 }
 
 const EMPTY = '––'; // &#8211; –– en dash
 
 const TWELVE_HOUR_PERIOD_VALUES = ['AM', 'PM'];
 
+const HOURS_12_HOUR = [...Array(12).keys()].map(hour => hour + 1).map(number22DigitString); // 01..12
+const HOURS_24_HOUR = [...Array(24).keys()].map(number22DigitString); // 00..23
+const MINUTES = [...Array(60).keys()].map(number22DigitString); // 00..59
+
 const KEYS_2_IGNORE = ['Tab'];
+const NAVIGATION_KEYS = ['Backspace', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+
+interface HourModeStrategy {
+  convert2Time(parts: Parts): Time24Hours | null;
+
+  convert2Parts(time: Time24Hours | null): Parts;
+}
+
+class TwelveHourModeStrategy implements HourModeStrategy {
+  convert2Time(parts: Parts): Time24Hours | null {
+    if (parts.minutes === EMPTY || parts.hours === EMPTY || parts.twelveHourPeriods === EMPTY) {
+      return null;
+    }
+    let hours = Number(parts.hours)
+    if (hours === 12) {
+      hours = 0;
+    }
+    if (parts.twelveHourPeriods === 'PM') {
+      hours = hours + 12;
+    }
+    return {hours, minutes: Number(parts.minutes)};
+  }
+
+  convert2Parts(time: Time24Hours | null): Parts {
+    if (!time) {
+      return {hours: EMPTY, minutes: EMPTY, twelveHourPeriods: EMPTY}
+    } else {
+      const timeString12hr = new Date(`1970-01-01T${time.hours}:${time.minutes}:00Z`)
+        .toLocaleTimeString('en-US',
+          {timeZone: 'UTC', hour12: true, hour: '2-digit', minute: '2-digit'}
+        );
+      const parts = timeString12hr.match(/([0-9]{2}):([0-9]{2}) ([(A|P)M]{2})/);
+      if (!parts) {
+        throw new Error(`timeString12hr did not match  hh:mm AP`)
+      }
+      return {hours: parts[1], minutes: parts[2], twelveHourPeriods: parts[3]};
+    }
+  }
+}
+
+class TwentyForHourModeStrategy implements HourModeStrategy {
+
+  convert2Time(parts: Parts): Time24Hours | null {
+    if (parts.minutes === EMPTY || parts.hours === EMPTY) {
+      return null;
+    }
+    return {hours: Number(parts.hours), minutes: Number(parts.minutes)};
+  }
+
+  convert2Parts(time: Time24Hours | null): Parts {
+    if (time) {
+      return {
+        hours: number22DigitString(time.hours),
+        minutes: number22DigitString(time.minutes),
+        twelveHourPeriods: null
+      }
+    } else {
+      return {hours: EMPTY, minutes: EMPTY, twelveHourPeriods: null}
+    }
+  }
+}
+
 
 @Component({
   selector: 'app-time-input',
@@ -43,13 +116,13 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   readonly parts = new FormGroup({hours: this.hours, minutes: this.minutes, twelveHourPeriods: this.twelveHourPeriods});
   readonly stateChanges = new Subject<void>();
   @HostBinding() readonly id = `app-time-input-${TimeInputComponent.nextId++}`;
-
-  focused = false;
   @ViewChild('containerEl', {static: true}) containerEl: ElementRef | undefined;
   @ViewChild('hoursEl', {static: true}) hoursEl: ElementRef | undefined;
-  @ViewChild('twelveHourPeriodsEl', {static: true}) twelveHourPeriodsEl: ElementRef | undefined;
+  @ViewChild('twelveHourPeriodsEl', {static: false}) twelveHourPeriodsEl: ElementRef | undefined;
   @ViewChild('minutesEl', {static: true}) minutesEl: ElementRef | undefined;
+  focused = false;
   private touched = false;
+  private hourModeStrategy = new TwentyForHourModeStrategy();
 
   constructor(@Optional() @Self() public ngControl: NgControl | null, private elementRef: ElementRef) {
     if (this.ngControl != null) {
@@ -57,12 +130,25 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     }
   }
 
+  private _twelveHourFormat = false;
+
+  get twelveHourFormat(): boolean {
+    return this._twelveHourFormat;
+  }
+
+  @Input()
+  set twelveHourFormat(value: BooleanInput) {
+    this._twelveHourFormat = coerceBooleanProperty(value);
+    this.hourModeStrategy = this._twelveHourFormat ? new TwelveHourModeStrategy() : new TwentyForHourModeStrategy();
+
+  };
+
   @HostBinding('class.floating')
   get shouldLabelFloat() {
     return this.focused || !this.empty;
   }
 
-  protected _required: boolean | undefined;
+  private _required: boolean | undefined;
 
   @Input()
   get required(): boolean {
@@ -80,7 +166,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     return this._disabled;
   }
 
-  set disabled(value: boolean) {
+  set disabled(value: BooleanInput) {
     this._disabled = coerceBooleanProperty(value);
     this._disabled ? this.parts.disable() : this.parts.enable();
     this.stateChanges.next();
@@ -104,21 +190,17 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
 
   @Input()
   get value(): Time24Hours | null {
-    let parts: Parts = this.parts.value;
-    if (parts.hours.length == 2 && parts.minutes.length == 2 && parts.twelveHourPeriods.length == 2) {
-      return {hours: Number(parts.hours), minutes: Number(parts.minutes)}
-    }
-    return null;
+    return this.hourModeStrategy.convert2Time(this.parts.value as Parts);
   }
 
   set value(time: Time24Hours | null) {
-    this.parts.setValue({hours: EMPTY, minutes: EMPTY, twelveHourPeriods: EMPTY} as Parts);
+    this.parts.setValue(this.hourModeStrategy.convert2Parts(time))
     this.stateChanges.next();
   }
 
   get empty() {
-    let parts: Parts = this.parts.value;
-    return !parts.minutes && !parts.hours && !parts.twelveHourPeriods;
+    const parts: Parts = this.parts.value;
+    return parts.minutes === EMPTY && parts.hours === EMPTY && parts.twelveHourPeriods === EMPTY;
   }
 
   onChange = (_: any) => {
@@ -169,9 +251,52 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     this.containerEl?.nativeElement.setAttribute('aria-describedby', ids.join(' '));
   }
 
-  onAnyInput() {
+  setDisabledState(isDisabled: boolean) {
+    this.disabled = isDisabled
+  }
+
+  hoursKeyDown(event: KeyboardEvent) {
+    if (KEYS_2_IGNORE.includes(event.key)) {
+      return;
+    }
+    event.preventDefault();
+    const {hours} = (this.parts.value as Parts);
+    let targetValue = hours;
+    if (NAVIGATION_KEYS.includes(event.key)) {
+      const result = this.navigateByKey(event.key, hours, this.twelveHourFormat ? HOURS_12_HOUR : HOURS_24_HOUR, undefined, this.minutesEl);
+      if (!result) {
+        return;
+      }
+      targetValue = result;
+    } else if (event.key === '1') {
+      // todo
+      this.minutesEl?.nativeElement.focus();
+    }
+    this.parts.patchValue({hours: targetValue} as Partial<Parts>)
     this.onChange(this.value);
   }
+
+  minutesKeyDown(event: KeyboardEvent) {
+    if (KEYS_2_IGNORE.includes(event.key)) {
+      return;
+    }
+    event.preventDefault();
+    const {minutes} = (this.parts.value as Parts);
+    let targetValue = minutes;
+    if (NAVIGATION_KEYS.includes(event.key)) {
+      const result = this.navigateByKey(event.key, minutes, MINUTES, this.hoursEl, this.twelveHourPeriodsEl);
+      if (!result) {
+        return;
+      }
+      targetValue = result;
+    } else if (event.key === '1') {
+      // todo
+      this.minutesEl?.nativeElement.focus();
+    }
+    this.parts.patchValue({minutes: targetValue} as Partial<Parts>)
+    this.onChange(this.value);
+  }
+
 
   twelveHourPeriodKeyDown(event: KeyboardEvent) {
     if (KEYS_2_IGNORE.includes(event.key)) {
@@ -179,27 +304,44 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     }
     event.preventDefault();
     const {twelveHourPeriods} = (this.parts.value as Parts);
-    const currentIdx = TWELVE_HOUR_PERIOD_VALUES.indexOf(twelveHourPeriods);
+    // means the control is not configured to handle AM and PM.
+    if (!twelveHourPeriods) {
+      return;
+    }
     let targetValue = twelveHourPeriods;
-    if (event.key === 'Backspace') {
-      targetValue = EMPTY;
-    } else if (event.key === 'ArrowLeft') {
-      this.minutesEl?.nativeElement.focus();
-      return;
-    } else if (event.key === 'ArrowRight') {
-      return;
-    } else if (event.key === 'ArrowUp') {
-      const targetIndex = (currentIdx + 1) % (TWELVE_HOUR_PERIOD_VALUES.length);
-      targetValue = TWELVE_HOUR_PERIOD_VALUES[targetIndex];
-    } else if (event.key === 'ArrowDown') {
-      const targetIndex = Math.abs(currentIdx - 1) % (TWELVE_HOUR_PERIOD_VALUES.length);
-      targetValue = TWELVE_HOUR_PERIOD_VALUES[targetIndex];
+    if (NAVIGATION_KEYS.includes(event.key)) {
+      const result = this.navigateByKey(event.key, twelveHourPeriods, TWELVE_HOUR_PERIOD_VALUES, this.minutesEl, undefined);
+      if (!result) {
+        return;
+      }
+      targetValue = result;
     } else if (event.key.toLowerCase() === 'a') {
       targetValue = 'AM';
     } else if (event.key.toLowerCase() === 'p') {
       targetValue = 'PM';
     }
     this.parts.patchValue({twelveHourPeriods: targetValue} as Partial<Parts>)
+    this.onChange(this.value);
   }
 
+  private navigateByKey(key: string, currentValue: string, possibleValues: string[], prevElement: ElementRef | undefined, nextElement: ElementRef | undefined): string | undefined {
+    const currentIdx = possibleValues.indexOf(currentValue);
+    let targetValue = currentValue;
+    if (key === 'Backspace') {
+      targetValue = EMPTY;
+    } else if (key === 'ArrowLeft') {
+      prevElement?.nativeElement.focus();
+      return;
+    } else if (key === 'ArrowRight') {
+      nextElement?.nativeElement.focus();
+      return;
+    } else if (key === 'ArrowUp') {
+      const targetIndex = (currentIdx + 1) % (possibleValues.length);
+      targetValue = possibleValues[targetIndex];
+    } else if (key === 'ArrowDown') {
+      const targetIndex = currentIdx === -1 ? possibleValues.length - 1 : (currentIdx - 1 + possibleValues.length) % (possibleValues.length);
+      targetValue = possibleValues[targetIndex];
+    }
+    return targetValue
+  }
 }
