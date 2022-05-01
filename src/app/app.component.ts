@@ -8,6 +8,7 @@ import {Time24Hours} from "./types";
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent {
+  simpleTime: string|undefined;
   name = new FormControl(null, Validators.required);
   time = new FormControl({
     hours: new Date().getHours(),

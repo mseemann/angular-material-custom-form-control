@@ -41,7 +41,6 @@ const NAVIGATION_KEYS = ['Backspace', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'Arr
 
 interface HourModeStrategy {
   convert2Time(parts: Parts): Time24Hours | null;
-
   convert2Parts(time: Time24Hours | null): Parts;
 }
 
@@ -268,9 +267,10 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
         return;
       }
       targetValue = result;
-    } else if (event.key === '1') {
-      // todo
-      this.minutesEl?.nativeElement.focus();
+    } else {
+      if (event.key === '1') {
+
+      }
     }
     this.parts.patchValue({hours: targetValue} as Partial<Parts>)
     this.onChange(this.value);
@@ -289,9 +289,11 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
         return;
       }
       targetValue = result;
-    } else if (event.key === '1') {
-      // todo
-      this.minutesEl?.nativeElement.focus();
+    } else {
+      const maxValue = 59;
+      if (event.key === '1') {
+
+      }
     }
     this.parts.patchValue({minutes: targetValue} as Partial<Parts>)
     this.onChange(this.value);
@@ -315,10 +317,12 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
         return;
       }
       targetValue = result;
-    } else if (event.key.toLowerCase() === 'a') {
-      targetValue = 'AM';
-    } else if (event.key.toLowerCase() === 'p') {
-      targetValue = 'PM';
+    } else {
+      if (event.key.toLowerCase() === 'a') {
+        targetValue = 'AM';
+      } else if (event.key.toLowerCase() === 'p') {
+        targetValue = 'PM';
+      }
     }
     this.parts.patchValue({twelveHourPeriods: targetValue} as Partial<Parts>)
     this.onChange(this.value);

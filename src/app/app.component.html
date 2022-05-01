@@ -17,4 +17,5 @@
   </mat-card>
 </div>
 
-<input type="time" name="appt">
+<div>{{simpleTime|json}}</div>
+<input type="time" name="appt" [(ngModel)]="simpleTime">
