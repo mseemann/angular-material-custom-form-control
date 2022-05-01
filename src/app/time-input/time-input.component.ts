@@ -35,13 +35,19 @@ const TWELVE_HOUR_PERIOD_VALUES = ['AM', 'PM'];
 const HOURS_12_HOUR = [...Array(12).keys()].map(hour => hour + 1).map(number22DigitString); // 01..12
 const HOURS_24_HOUR = [...Array(24).keys()].map(number22DigitString); // 00..23
 const MINUTES = [...Array(60).keys()].map(number22DigitString); // 00..59
+const NUMBERS = [...Array(10).keys()].map(String); // 0..9
 
 const KEYS_2_IGNORE = ['Tab'];
 const NAVIGATION_KEYS = ['Backspace', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 
 interface HourModeStrategy {
   convert2Time(parts: Parts): Time24Hours | null;
+
   convert2Parts(time: Time24Hours | null): Parts;
+
+  isHoursBufferFull(hoursBuffer: string[]): boolean;
+
+  empty(parts: Parts): boolean;
 }
 
 class TwelveHourModeStrategy implements HourModeStrategy {
@@ -63,16 +69,24 @@ class TwelveHourModeStrategy implements HourModeStrategy {
     if (!time) {
       return {hours: EMPTY, minutes: EMPTY, twelveHourPeriods: EMPTY}
     } else {
-      const timeString12hr = new Date(`1970-01-01T${time.hours}:${time.minutes}:00Z`)
+      const timeString12hr = new Date(`1970-01-01T${number22DigitString(time.hours)}:${number22DigitString(time.minutes)}:00Z`)
         .toLocaleTimeString('en-US',
           {timeZone: 'UTC', hour12: true, hour: '2-digit', minute: '2-digit'}
         );
       const parts = timeString12hr.match(/([0-9]{2}):([0-9]{2}) ([(A|P)M]{2})/);
       if (!parts) {
-        throw new Error(`timeString12hr did not match  hh:mm AP`)
+        throw new Error(`${timeString12hr} did not match  hh:mm AP`)
       }
       return {hours: parts[1], minutes: parts[2], twelveHourPeriods: parts[3]};
     }
+  }
+
+  isHoursBufferFull(hoursBuffer: string[]): boolean {
+    return hoursBuffer.length === 2 || (hoursBuffer.length === 1 && Number(hoursBuffer[0]) >= 2);
+  }
+
+  empty(parts: Parts): boolean {
+    return parts.minutes === EMPTY && parts.hours === EMPTY && parts.twelveHourPeriods === EMPTY;
   }
 }
 
@@ -95,6 +109,14 @@ class TwentyForHourModeStrategy implements HourModeStrategy {
     } else {
       return {hours: EMPTY, minutes: EMPTY, twelveHourPeriods: null}
     }
+  }
+
+  isHoursBufferFull(hoursBuffer: string[]): boolean {
+    return hoursBuffer.length === 2 || (hoursBuffer.length === 1 && Number(hoursBuffer[0]) >= 3);
+  }
+
+  empty(parts: Parts): boolean {
+    return parts.minutes === EMPTY && parts.hours === EMPTY;
   }
 }
 
@@ -122,6 +144,8 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   focused = false;
   private touched = false;
   private hourModeStrategy = new TwentyForHourModeStrategy();
+  private minutesBuffer: string[] = [];
+  private hoursBuffer: string[] = [];
 
   constructor(@Optional() @Self() public ngControl: NgControl | null, private elementRef: ElementRef) {
     if (this.ngControl != null) {
@@ -139,7 +163,6 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   set twelveHourFormat(value: BooleanInput) {
     this._twelveHourFormat = coerceBooleanProperty(value);
     this.hourModeStrategy = this._twelveHourFormat ? new TwelveHourModeStrategy() : new TwentyForHourModeStrategy();
-
   };
 
   @HostBinding('class.floating')
@@ -199,7 +222,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
 
   get empty() {
     const parts: Parts = this.parts.value;
-    return parts.minutes === EMPTY && parts.hours === EMPTY && parts.twelveHourPeriods === EMPTY;
+    return this.hourModeStrategy.empty(this.parts.value);
   }
 
   onChange = (_: any) => {
@@ -268,8 +291,17 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
       }
       targetValue = result;
     } else {
-      if (event.key === '1') {
-
+      if (NUMBERS.includes(event.key)) {
+        if (this.isHoursBufferFull()) {
+          this.resetHoursBuffer();
+        }
+        this.hoursBuffer.push(event.key);
+        const hours = Number(this.hoursBuffer.join(''));
+        // wenn größer als 12, dann 12 abziehen, wenn 12h modus
+        targetValue = number22DigitString(hours);
+        if (this.isHoursBufferFull()) {
+          this.minutesEl?.nativeElement.focus();
+        }
       }
     }
     this.parts.patchValue({hours: targetValue} as Partial<Parts>)
@@ -290,9 +322,16 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
       }
       targetValue = result;
     } else {
-      const maxValue = 59;
-      if (event.key === '1') {
-
+      if (NUMBERS.includes(event.key)) {
+        if (this.isMinuteBufferFull()) {
+          this.resetMinutesBuffer();
+        }
+        this.minutesBuffer.push(event.key);
+        const minutes = Number(this.minutesBuffer.join(''));
+        targetValue = number22DigitString(minutes);
+        if (this.isMinuteBufferFull()) {
+          this.twelveHourPeriodsEl?.nativeElement.focus();
+        }
       }
     }
     this.parts.patchValue({minutes: targetValue} as Partial<Parts>)
@@ -328,6 +367,14 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     this.onChange(this.value);
   }
 
+  resetMinutesBuffer() {
+    this.minutesBuffer = [];
+  }
+
+  resetHoursBuffer() {
+    this.hoursBuffer = [];
+  }
+
   private navigateByKey(key: string, currentValue: string, possibleValues: string[], prevElement: ElementRef | undefined, nextElement: ElementRef | undefined): string | undefined {
     const currentIdx = possibleValues.indexOf(currentValue);
     let targetValue = currentValue;
@@ -348,4 +395,13 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     }
     return targetValue
   }
+
+  private isMinuteBufferFull() {
+    return this.minutesBuffer.length === 2 || (this.minutesBuffer.length === 1 && Number(this.minutesBuffer[0]) >= 6);
+  }
+
+  private isHoursBufferFull() {
+    return this.hourModeStrategy.isHoursBufferFull(this.hoursBuffer);
+  }
+
 }
