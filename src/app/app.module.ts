@@ -8,6 +8,7 @@ import {MatInputModule} from "@angular/material/input";
 import {MatCardModule} from "@angular/material/card";
 import {ReactiveFormsModule} from "@angular/forms";
 import { TimeInputComponent } from './time-input/time-input.component';
+import {MatIconModule} from "@angular/material/icon";
 
 @NgModule({
   declarations: [
@@ -19,6 +20,7 @@ import { TimeInputComponent } from './time-input/time-input.component';
     BrowserAnimationsModule,
     MatInputModule,
     MatFormFieldModule,
+    MatIconModule,
     MatCardModule,
     ReactiveFormsModule,
   ],

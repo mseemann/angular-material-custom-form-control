@@ -9,6 +9,11 @@ input {
   outline: none;
   font: inherit;
   text-align: center;
+  caret-color: transparent;
+  cursor: default;
+  &:focus {
+    background-color: lightblue;
+  }
 }
 
 span {

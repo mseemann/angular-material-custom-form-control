@@ -105,9 +105,21 @@
             ],
             "scripts": []
           }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
+          }
         }
       }
     }
   },
-  "defaultProject": "angular-material-custom-form-control"
+  "defaultProject": "angular-material-custom-form-control",
+  "cli": {
+    "defaultCollection": "@angular-eslint/schematics"
+  }
 }

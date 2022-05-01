@@ -1,8 +1,19 @@
-import {Component, ElementRef, HostBinding, Input, OnDestroy, Optional, Self} from '@angular/core';
-import {AbstractControl, ControlValueAccessor, FormControl, FormGroup, NgControl, Validators} from "@angular/forms";
-import {MatFormField, MatFormFieldControl} from "@angular/material/form-field";
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostBinding,
+  Input,
+  OnDestroy,
+  Optional,
+  Self,
+  ViewChild
+} from '@angular/core';
+import {ControlValueAccessor, FormControl, FormGroup, NgControl, Validators} from "@angular/forms";
+import {MatFormFieldControl} from "@angular/material/form-field";
 import {Subject} from "rxjs";
 import {BooleanInput, coerceBooleanProperty} from "@angular/cdk/coercion";
+import {Time24Hours} from "../types";
 
 type Parts = {
   hours: string,
@@ -10,36 +21,37 @@ type Parts = {
   twelveHourPeriods: string
 }
 
+const EMPTY = '––'; // &#8211; –– en dash
+
+const TWELVE_HOUR_PERIOD_VALUES = ['AM', 'PM'];
+
+const KEYS_2_IGNORE = ['Tab'];
+
 @Component({
   selector: 'app-time-input',
   templateUrl: './time-input.component.html',
   styleUrls: ['./time-input.component.scss'],
   providers: [{provide: MatFormFieldControl, useExisting: TimeInputComponent}],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class TimeInputComponent implements ControlValueAccessor, MatFormFieldControl<string>, OnDestroy {
+export class TimeInputComponent implements ControlValueAccessor, MatFormFieldControl<Time24Hours>, OnDestroy {
   static nextId = 0;
 
-  hours = new FormControl();
-  minutes = new FormControl();
-  twelveHourPeriods = new FormControl();
-
-  parts = new FormGroup({hours: this.hours, minutes: this.minutes, twelveHourPeriods: this.twelveHourPeriods});
-
+  readonly hours = new FormControl();
+  readonly minutes = new FormControl();
+  readonly twelveHourPeriods = new FormControl();
+  readonly parts = new FormGroup({hours: this.hours, minutes: this.minutes, twelveHourPeriods: this.twelveHourPeriods});
   readonly stateChanges = new Subject<void>();
-
   @HostBinding() readonly id = `app-time-input-${TimeInputComponent.nextId++}`;
+
   focused = false;
-  touched = false;
-  controlType = 'app-time-input';
+  @ViewChild('containerEl', {static: true}) containerEl: ElementRef | undefined;
+  @ViewChild('hoursEl', {static: true}) hoursEl: ElementRef | undefined;
+  @ViewChild('twelveHourPeriodsEl', {static: true}) twelveHourPeriodsEl: ElementRef | undefined;
+  @ViewChild('minutesEl', {static: true}) minutesEl: ElementRef | undefined;
+  private touched = false;
 
-  @Input('aria-describedby') userAriaDescribedBy: string = '';
-
-  autofilled: boolean = false;
-
-  constructor(
-    @Optional() @Self() public ngControl: NgControl | null,
-    private elementRef: ElementRef,
-    @Optional() public parentFormField: MatFormField) {
+  constructor(@Optional() @Self() public ngControl: NgControl | null, private elementRef: ElementRef) {
     if (this.ngControl != null) {
       this.ngControl.valueAccessor = this;
     }
@@ -91,22 +103,22 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   }
 
   @Input()
-  get value(): string | null {
-    let n: Parts = this.parts.value;
-    if (n.hours.length == 2 && n.minutes.length == 2 && n.twelveHourPeriods.length == 2) {
-      return `${n.hours}:${n.minutes} ${n.twelveHourPeriods}`;
+  get value(): Time24Hours | null {
+    let parts: Parts = this.parts.value;
+    if (parts.hours.length == 2 && parts.minutes.length == 2 && parts.twelveHourPeriods.length == 2) {
+      return {hours: Number(parts.hours), minutes: Number(parts.minutes)}
     }
     return null;
   }
 
-  set value(time: string | null) {
-    this.parts.setValue({hours: '', minutes: '', twelveHourPeriods: ''} as Parts);
+  set value(time: Time24Hours | null) {
+    this.parts.setValue({hours: EMPTY, minutes: EMPTY, twelveHourPeriods: EMPTY} as Parts);
     this.stateChanges.next();
   }
 
   get empty() {
-    let n: Parts = this.parts.value;
-    return !n.minutes && !n.hours && !n.twelveHourPeriods;
+    let parts: Parts = this.parts.value;
+    return !parts.minutes && !parts.hours && !parts.twelveHourPeriods;
   }
 
   onChange = (_: any) => {
@@ -115,7 +127,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   onTouched = () => {
   };
 
-  onFocusIn(event: FocusEvent) {
+  onFocusIn() {
     if (!this.focused) {
       this.focused = true;
       this.stateChanges.next();
@@ -149,17 +161,45 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
 
   onContainerClick(event: MouseEvent) {
     if ((event.target as Element).tagName.toLowerCase() != 'input') {
-      this.elementRef.nativeElement.querySelector('input').focus();
+      this.hoursEl?.nativeElement.focus();
     }
   }
 
   setDescribedByIds(ids: string[]) {
-    const controlElement = this.elementRef.nativeElement
-      .querySelector('.app-time-input-container')!;
-    controlElement.setAttribute('aria-describedby', ids.join(' '));
+    this.containerEl?.nativeElement.setAttribute('aria-describedby', ids.join(' '));
   }
 
-  handleInput(partControl: AbstractControl) {
+  onAnyInput() {
     this.onChange(this.value);
   }
+
+  twelveHourPeriodKeyDown(event: KeyboardEvent) {
+    if (KEYS_2_IGNORE.includes(event.key)) {
+      return;
+    }
+    event.preventDefault();
+    const {twelveHourPeriods} = (this.parts.value as Parts);
+    const currentIdx = TWELVE_HOUR_PERIOD_VALUES.indexOf(twelveHourPeriods);
+    let targetValue = twelveHourPeriods;
+    if (event.key === 'Backspace') {
+      targetValue = EMPTY;
+    } else if (event.key === 'ArrowLeft') {
+      this.minutesEl?.nativeElement.focus();
+      return;
+    } else if (event.key === 'ArrowRight') {
+      return;
+    } else if (event.key === 'ArrowUp') {
+      const targetIndex = (currentIdx + 1) % (TWELVE_HOUR_PERIOD_VALUES.length);
+      targetValue = TWELVE_HOUR_PERIOD_VALUES[targetIndex];
+    } else if (event.key === 'ArrowDown') {
+      const targetIndex = Math.abs(currentIdx - 1) % (TWELVE_HOUR_PERIOD_VALUES.length);
+      targetValue = TWELVE_HOUR_PERIOD_VALUES[targetIndex];
+    } else if (event.key.toLowerCase() === 'a') {
+      targetValue = 'AM';
+    } else if (event.key.toLowerCase() === 'p') {
+      targetValue = 'PM';
+    }
+    this.parts.patchValue({twelveHourPeriods: targetValue} as Partial<Parts>)
+  }
+
 }
