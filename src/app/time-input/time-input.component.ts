@@ -15,12 +15,9 @@ import {Subject} from "rxjs";
 import {BooleanInput, coerceBooleanProperty} from "@angular/cdk/coercion";
 import {Time24Hours} from "../types";
 
-const number22DigitString = (n: number): string => {
-  return n.toLocaleString("de-DE", {
-    minimumIntegerDigits: 2,
-    useGrouping: false,
-  })
-}
+const number22DigitString = (n: number): string => n.toLocaleString("de-DE", {
+  minimumIntegerDigits: 2
+})
 
 type Parts = {
   hours: string,
@@ -122,7 +119,6 @@ class TwentyForHourModeStrategy implements HourModeStrategy {
     return Math.min(hours, 23);
   }
 }
-
 
 @Component({
   selector: 'app-time-input',
@@ -303,7 +299,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
       }
       return currentValue;
     }
-    const createPatchValue = (value: string): Partial<Parts> => ({hours: value} as Partial<Parts>)
+    const createPatchValue = (hours: string): Partial<Parts> => ({hours} as Partial<Parts>)
     this.defaultKeyDownHandler(
       event,
       this.twelveHourFormat ? HOURS_12_HOUR : HOURS_24_HOUR,
@@ -331,7 +327,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
       }
       return currentValue;
     }
-    const createPatchValue = (value: string): Partial<Parts> => ({minutes: value} as Partial<Parts>)
+    const createPatchValue = (minutes: string): Partial<Parts> => ({minutes} as Partial<Parts>)
     this.defaultKeyDownHandler(
       event,
       MINUTES,
@@ -352,7 +348,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
       }
       return currentValue;
     }
-    const createPatchValue = (value: string): Partial<Parts> => ({twelveHourPeriods: value} as Partial<Parts>)
+    const createPatchValue = (twelveHourPeriods: string): Partial<Parts> => ({twelveHourPeriods} as Partial<Parts>)
     this.defaultKeyDownHandler(
       event,
       TWELVE_HOUR_PERIOD_VALUES,
