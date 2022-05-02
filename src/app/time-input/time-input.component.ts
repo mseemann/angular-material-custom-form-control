@@ -31,28 +31,26 @@ type Parts = {
 const EMPTY = '––'; // &#8211; –– en dash
 
 const TWELVE_HOUR_PERIOD_VALUES = ['AM', 'PM'];
-
 const HOURS_12_HOUR = [...Array(12).keys()].map(hour => hour + 1).map(number22DigitString); // 01..12
 const HOURS_24_HOUR = [...Array(24).keys()].map(number22DigitString); // 00..23
 const MINUTES = [...Array(60).keys()].map(number22DigitString); // 00..59
 const NUMBERS = [...Array(10).keys()].map(String); // 0..9
-
-const KEYS_2_IGNORE = ['Tab'];
-const NAVIGATION_KEYS = ['Backspace', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 
 interface HourModeStrategy {
   convert2Time(parts: Parts): Time24Hours | null;
 
   convert2Parts(time: Time24Hours | null): Parts;
 
+  isEmpty(parts: Parts): boolean;
+
   isHoursBufferFull(hoursBuffer: string[]): boolean;
 
-  empty(parts: Parts): boolean;
+  restrictOrConvertHourToMaxValue(hours: number): number;
 }
 
 class TwelveHourModeStrategy implements HourModeStrategy {
   convert2Time(parts: Parts): Time24Hours | null {
-    if (parts.minutes === EMPTY || parts.hours === EMPTY || parts.twelveHourPeriods === EMPTY) {
+    if (this.isEmpty(parts)) {
       return null;
     }
     let hours = Number(parts.hours)
@@ -66,18 +64,18 @@ class TwelveHourModeStrategy implements HourModeStrategy {
   }
 
   convert2Parts(time: Time24Hours | null): Parts {
-    if (!time) {
-      return {hours: EMPTY, minutes: EMPTY, twelveHourPeriods: EMPTY}
-    } else {
+    if (time) {
       const timeString12hr = new Date(`1970-01-01T${number22DigitString(time.hours)}:${number22DigitString(time.minutes)}:00Z`)
         .toLocaleTimeString('en-US',
           {timeZone: 'UTC', hour12: true, hour: '2-digit', minute: '2-digit'}
         );
-      const parts = timeString12hr.match(/([0-9]{2}):([0-9]{2}) ([(A|P)M]{2})/);
+      const parts = timeString12hr.match(/(\d{2}):(\d{2}) ([(A|P)M]{2})/);
       if (!parts) {
-        throw new Error(`${timeString12hr} did not match  hh:mm AP`)
+        throw new Error(`${timeString12hr} did not match: hh:mm AP`)
       }
       return {hours: parts[1], minutes: parts[2], twelveHourPeriods: parts[3]};
+    } else {
+      return {hours: EMPTY, minutes: EMPTY, twelveHourPeriods: EMPTY}
     }
   }
 
@@ -85,18 +83,19 @@ class TwelveHourModeStrategy implements HourModeStrategy {
     return hoursBuffer.length === 2 || (hoursBuffer.length === 1 && Number(hoursBuffer[0]) >= 2);
   }
 
-  empty(parts: Parts): boolean {
+  isEmpty(parts: Parts): boolean {
     return parts.minutes === EMPTY && parts.hours === EMPTY && parts.twelveHourPeriods === EMPTY;
+  }
+
+  restrictOrConvertHourToMaxValue(hours: number): number {
+    return hours <= 12 ? hours : hours - 12;
   }
 }
 
 class TwentyForHourModeStrategy implements HourModeStrategy {
 
   convert2Time(parts: Parts): Time24Hours | null {
-    if (parts.minutes === EMPTY || parts.hours === EMPTY) {
-      return null;
-    }
-    return {hours: Number(parts.hours), minutes: Number(parts.minutes)};
+    return this.isEmpty(parts) ? null : {hours: Number(parts.hours), minutes: Number(parts.minutes)};
   }
 
   convert2Parts(time: Time24Hours | null): Parts {
@@ -112,11 +111,15 @@ class TwentyForHourModeStrategy implements HourModeStrategy {
   }
 
   isHoursBufferFull(hoursBuffer: string[]): boolean {
-    return hoursBuffer.length === 2 || (hoursBuffer.length === 1 && Number(hoursBuffer[0]) >= 3);
+    return hoursBuffer.length === 2 || (hoursBuffer.length === 1 && Number(hoursBuffer[0]) > 2);
   }
 
-  empty(parts: Parts): boolean {
+  isEmpty(parts: Parts): boolean {
     return parts.minutes === EMPTY && parts.hours === EMPTY;
+  }
+
+  restrictOrConvertHourToMaxValue(hours: number): number {
+    return Math.min(hours, 23);
   }
 }
 
@@ -128,7 +131,7 @@ class TwentyForHourModeStrategy implements HourModeStrategy {
   providers: [{provide: MatFormFieldControl, useExisting: TimeInputComponent}],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class TimeInputComponent implements ControlValueAccessor, MatFormFieldControl<Time24Hours>, OnDestroy {
+export class TimeInputComponent implements ControlValueAccessor, MatFormFieldControl<Time24Hours | null>, OnDestroy {
   static nextId = 0;
 
   readonly hours = new FormControl();
@@ -166,7 +169,11 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   @Input()
   set twelveHourFormat(value: BooleanInput) {
     this._twelveHourFormat = coerceBooleanProperty(value);
+    // read the current value before the format is changed
+    const currentModelValue = this.value;
     this.hourModeStrategy = this._twelveHourFormat ? new TwelveHourModeStrategy() : new TwentyForHourModeStrategy();
+    // assign the old value to be converted to the new format
+    this.value = currentModelValue;
   };
 
   @HostBinding('class.floating')
@@ -225,8 +232,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   }
 
   get empty() {
-    const parts: Parts = this.parts.value;
-    return this.hourModeStrategy.empty(this.parts.value);
+    return this.hourModeStrategy.isEmpty(this.parts.value);
   }
 
   onChange = (_: any) => {
@@ -236,10 +242,8 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   };
 
   onFocusIn() {
-    if (!this.focused) {
-      this.focused = true;
-      this.stateChanges.next();
-    }
+    this.focused = true;
+    this.stateChanges.next();
   }
 
   onFocusOut(event: FocusEvent) {
@@ -255,7 +259,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     this.stateChanges.complete();
   }
 
-  writeValue(obj: any): void {
+  writeValue(obj: Time24Hours | null): void {
     this.value = obj;
   }
 
@@ -282,92 +286,115 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   }
 
   hoursKeyDown(event: KeyboardEvent) {
-    if (KEYS_2_IGNORE.includes(event.key)) {
-      return;
-    }
-    event.preventDefault();
     const {hours} = (this.parts.value as Parts);
-    let targetValue = hours;
-    if (NAVIGATION_KEYS.includes(event.key)) {
-      const result = this.navigateByKey(event.key, hours, this.twelveHourFormat ? HOURS_12_HOUR : HOURS_24_HOUR, undefined, this.minutesEl);
-      if (!result) {
-        return;
-      }
-      targetValue = result;
-    } else {
+    const specialKeyDownHandler = (key: string, currentValue: string): string => {
       if (NUMBERS.includes(event.key)) {
         if (this.isHoursBufferFull()) {
           this.resetHoursBuffer();
         }
         this.hoursBuffer.push(event.key);
-        const hours = Number(this.hoursBuffer.join(''));
-        // wenn größer als 12, dann 12 abziehen, wenn 12h modus
-        targetValue = number22DigitString(hours);
+        const hours = this.hourModeStrategy.restrictOrConvertHourToMaxValue(Number(this.hoursBuffer.join('')));
+
+        const targetValue = number22DigitString(hours);
         if (this.isHoursBufferFull()) {
           this.minutesEl?.nativeElement.focus();
         }
+        return targetValue;
       }
+      return currentValue;
     }
-    this.parts.patchValue({hours: targetValue} as Partial<Parts>)
-    this.onChange(this.value);
+    const createPatchValue = (value: string): Partial<Parts> => ({hours: value} as Partial<Parts>)
+    this.defaultKeyDownHandler(
+      event,
+      this.twelveHourFormat ? HOURS_12_HOUR : HOURS_24_HOUR,
+      hours ?? '',
+      undefined,
+      this.minutesEl,
+      specialKeyDownHandler,
+      createPatchValue);
   }
 
   minutesKeyDown(event: KeyboardEvent) {
-    if (KEYS_2_IGNORE.includes(event.key)) {
-      return;
-    }
-    event.preventDefault();
     const {minutes} = (this.parts.value as Parts);
-    let targetValue = minutes;
-    if (NAVIGATION_KEYS.includes(event.key)) {
-      const result = this.navigateByKey(event.key, minutes, MINUTES, this.hoursEl, this.twelveHourPeriodsEl);
-      if (!result) {
-        return;
-      }
-      targetValue = result;
-    } else {
+    const specialKeyDownHandler = (key: string, currentValue: string): string => {
       if (NUMBERS.includes(event.key)) {
         if (this.isMinuteBufferFull()) {
           this.resetMinutesBuffer();
         }
         this.minutesBuffer.push(event.key);
         const minutes = Number(this.minutesBuffer.join(''));
-        targetValue = number22DigitString(minutes);
+        const targetValue = number22DigitString(minutes);
         if (this.isMinuteBufferFull()) {
           this.twelveHourPeriodsEl?.nativeElement.focus();
         }
+        return targetValue;
       }
+      return currentValue;
     }
-    this.parts.patchValue({minutes: targetValue} as Partial<Parts>)
-    this.onChange(this.value);
+    const createPatchValue = (value: string): Partial<Parts> => ({minutes: value} as Partial<Parts>)
+    this.defaultKeyDownHandler(
+      event,
+      MINUTES,
+      minutes ?? '',
+      this.hoursEl,
+      this.twelveHourPeriodsEl,
+      specialKeyDownHandler,
+      createPatchValue);
   }
 
-
   twelveHourPeriodKeyDown(event: KeyboardEvent) {
-    if (KEYS_2_IGNORE.includes(event.key)) {
+    const {twelveHourPeriods} = (this.parts.value as Parts);
+    const specialKeyDownHandler = (key: string, currentValue: string): string => {
+      if (key.toLowerCase() === 'a') {
+        return 'AM';
+      } else if (key.toLowerCase() === 'p') {
+        return 'PM';
+      }
+      return currentValue;
+    }
+    const createPatchValue = (value: string): Partial<Parts> => ({twelveHourPeriods: value} as Partial<Parts>)
+    this.defaultKeyDownHandler(
+      event,
+      TWELVE_HOUR_PERIOD_VALUES,
+      twelveHourPeriods ?? '',
+      this.minutesEl,
+      undefined,
+      specialKeyDownHandler,
+      createPatchValue);
+  }
+
+  private defaultKeyDownHandler(
+    event: KeyboardEvent,
+    possibleInputValues: string[],
+    currentValue: string,
+    previousEl: ElementRef | undefined,
+    nextEl: ElementRef | undefined,
+    specialKeyDownHandler: (key: string, currentValue: string) => string,
+    createPatchValue: (value: string) => Partial<Parts>) {
+    if (event.key === 'Tab') {
       return;
     }
     event.preventDefault();
-    const {twelveHourPeriods} = (this.parts.value as Parts);
-    // means the control is not configured to handle AM and PM.
-    if (!twelveHourPeriods) {
+    const currentIdx = possibleInputValues.indexOf(currentValue);
+    let targetValue = currentValue;
+    if (event.key === 'Backspace') {
+      targetValue = EMPTY;
+    } else if (event.key === 'ArrowLeft') {
+      previousEl?.nativeElement.focus();
       return;
-    }
-    let targetValue = twelveHourPeriods;
-    if (NAVIGATION_KEYS.includes(event.key)) {
-      const result = this.navigateByKey(event.key, twelveHourPeriods, TWELVE_HOUR_PERIOD_VALUES, this.minutesEl, undefined);
-      if (!result) {
-        return;
-      }
-      targetValue = result;
+    } else if (event.key === 'ArrowRight') {
+      nextEl?.nativeElement.focus();
+      return;
+    } else if (event.key === 'ArrowUp') {
+      const targetIndex = (currentIdx + 1) % (possibleInputValues.length);
+      targetValue = possibleInputValues[targetIndex];
+    } else if (event.key === 'ArrowDown') {
+      const targetIndex = currentIdx === -1 ? possibleInputValues.length - 1 : (currentIdx - 1 + possibleInputValues.length) % (possibleInputValues.length);
+      targetValue = possibleInputValues[targetIndex];
     } else {
-      if (event.key.toLowerCase() === 'a') {
-        targetValue = 'AM';
-      } else if (event.key.toLowerCase() === 'p') {
-        targetValue = 'PM';
-      }
+      targetValue = specialKeyDownHandler(event.key, targetValue);
     }
-    this.parts.patchValue({twelveHourPeriods: targetValue} as Partial<Parts>)
+    this.parts.patchValue(createPatchValue(targetValue))
     this.onChange(this.value);
   }
 
@@ -377,27 +404,6 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
 
   resetHoursBuffer() {
     this.hoursBuffer = [];
-  }
-
-  private navigateByKey(key: string, currentValue: string, possibleValues: string[], prevElement: ElementRef | undefined, nextElement: ElementRef | undefined): string | undefined {
-    const currentIdx = possibleValues.indexOf(currentValue);
-    let targetValue = currentValue;
-    if (key === 'Backspace') {
-      targetValue = EMPTY;
-    } else if (key === 'ArrowLeft') {
-      prevElement?.nativeElement.focus();
-      return;
-    } else if (key === 'ArrowRight') {
-      nextElement?.nativeElement.focus();
-      return;
-    } else if (key === 'ArrowUp') {
-      const targetIndex = (currentIdx + 1) % (possibleValues.length);
-      targetValue = possibleValues[targetIndex];
-    } else if (key === 'ArrowDown') {
-      const targetIndex = currentIdx === -1 ? possibleValues.length - 1 : (currentIdx - 1 + possibleValues.length) % (possibleValues.length);
-      targetValue = possibleValues[targetIndex];
-    }
-    return targetValue
   }
 
   private isMinuteBufferFull() {

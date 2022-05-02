@@ -9,22 +9,24 @@ import {MatCardModule} from "@angular/material/card";
 import {FormsModule, ReactiveFormsModule} from "@angular/forms";
 import { TimeInputComponent } from './time-input/time-input.component';
 import {MatIconModule} from "@angular/material/icon";
+import {MatCheckboxModule} from "@angular/material/checkbox";
 
 @NgModule({
   declarations: [
     AppComponent,
     TimeInputComponent
   ],
-    imports: [
-        BrowserModule,
-        BrowserAnimationsModule,
-        MatInputModule,
-        MatFormFieldModule,
-        MatIconModule,
-        MatCardModule,
-        ReactiveFormsModule,
-        FormsModule,
-    ],
+  imports: [
+    BrowserModule,
+    BrowserAnimationsModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatCardModule,
+    ReactiveFormsModule,
+    FormsModule,
+    MatCheckboxModule,
+  ],
   providers: [{provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: {appearance: 'outline'}}],
   bootstrap: [AppComponent]
 })

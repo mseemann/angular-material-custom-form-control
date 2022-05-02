@@ -1,6 +1,5 @@
-<div [formGroup]="form">
-  <mat-card>
-
+<mat-card>
+  <div [formGroup]="form">
     <mat-form-field>
       <mat-label>Name</mat-label>
       <input matInput [formControl]="name">
@@ -9,13 +8,17 @@
 
     <mat-form-field>
       <mat-label>Time</mat-label>
-      <app-time-input [formControl]="time" [twelveHourFormat]="twelveHourFormat" ></app-time-input>
+      <app-time-input [formControl]="time" [twelveHourFormat]="twelveHourFormat"></app-time-input>
       <mat-icon matSuffix>schedule</mat-icon>
       <mat-error *ngIf="time.invalid">{{getTimeErrorMessage()}}</mat-error>
     </mat-form-field>
+  </div>
 
-  </mat-card>
-</div>
+  <mat-checkbox class="example-margin" [(ngModel)]="twelveHourFormat">Time Format - 12 Hour</mat-checkbox>
+
+
+</mat-card>
+
 
 <div>{{simpleTime|json}}</div>
 <input type="time" name="appt" [(ngModel)]="simpleTime">
