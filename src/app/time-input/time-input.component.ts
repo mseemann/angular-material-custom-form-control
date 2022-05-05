@@ -81,7 +81,7 @@ class TwelveHourModeStrategy implements HourModeStrategy {
   }
 
   isEmpty(parts: Parts): boolean {
-    return parts.minutes === EMPTY && parts.hours === EMPTY && parts.twelveHourPeriods === EMPTY;
+    return parts.minutes === EMPTY || parts.hours === EMPTY || parts.twelveHourPeriods === EMPTY;
   }
 
   restrictOrConvertHourToMaxValue(hours: number): number {
@@ -112,7 +112,7 @@ class TwentyForHourModeStrategy implements HourModeStrategy {
   }
 
   isEmpty(parts: Parts): boolean {
-    return parts.minutes === EMPTY && parts.hours === EMPTY;
+    return parts.minutes === EMPTY || parts.hours === EMPTY;
   }
 
   restrictOrConvertHourToMaxValue(hours: number): number {

@@ -6,26 +6,26 @@ import {FormControl, FormGroup, ReactiveFormsModule, Validators} from "@angular/
 import {By} from "@angular/platform-browser";
 import {Time24Hours} from "../types";
 
-class TimeInputComponentObject{
+class TimeInputComponentObject {
 
   private componentInstance: TimeInputComponent;
 
   constructor(private debugElement: DebugElement) {
-    this.componentInstance =  this.debugElement.componentInstance;
+    this.componentInstance = this.debugElement.componentInstance;
   }
 
   getDisplayValue() {
     const hourString = this.componentInstance.hoursEl?.nativeElement.value
     const minutesString = this.componentInstance.minutesEl?.nativeElement.value
     let timePeriodString = this.componentInstance.twelveHourPeriodsEl?.nativeElement.value ?? '';
-    if (timePeriodString){
-      timePeriodString = ' '+timePeriodString;
+    if (timePeriodString) {
+      timePeriodString = ' ' + timePeriodString;
     }
     return `${hourString}:${minutesString}${timePeriodString}`;
   }
 
   click() {
-    this.componentInstance.onContainerClick({target:{tagName:'div'} as any} as MouseEvent);
+    this.componentInstance.onContainerClick({target: {tagName: 'div'} as any} as MouseEvent);
   }
 
   blur() {
@@ -33,27 +33,39 @@ class TimeInputComponentObject{
   }
 
   inputHour(inputChar: string) {
-    this.debugElement.queryAll(By.css('input'))[0].triggerEventHandler('keydown', {key:inputChar, preventDefault : ()=>{}})
+    this.debugElement.queryAll(By.css('input'))[0].triggerEventHandler('keydown', {
+      key: inputChar,
+      preventDefault: () => {
+      }
+    })
   }
 
   inputMinute(inputChar: string) {
-    this.debugElement.queryAll(By.css('input'))[1].triggerEventHandler('keydown', {key:inputChar, preventDefault : ()=>{}})
+    this.debugElement.queryAll(By.css('input'))[1].triggerEventHandler('keydown', {
+      key: inputChar,
+      preventDefault: () => {
+      }
+    })
   }
 
   inputTimePeriod(inputChar: string) {
-    this.debugElement.queryAll(By.css('input'))[2].triggerEventHandler('keydown', {key:inputChar, preventDefault : ()=>{}})
+    this.debugElement.queryAll(By.css('input'))[2].triggerEventHandler('keydown', {
+      key: inputChar,
+      preventDefault: () => {
+      }
+    })
   }
 
   isHourInputActiveElement() {
-    return  (this.componentInstance.hoursEl?.nativeElement as HTMLElement).classList.contains('hours');
+    return (this.componentInstance.hoursEl?.nativeElement as HTMLElement).classList.contains('hours');
   }
 
   isMinutesInputActiveElement() {
-    return  (this.componentInstance.minutesEl?.nativeElement as HTMLElement).classList.contains('minutes');
+    return (this.componentInstance.minutesEl?.nativeElement as HTMLElement).classList.contains('minutes');
   }
 
   isPeriodInputActiveElement() {
-    return  (this.componentInstance.twelveHourPeriodsEl?.nativeElement as HTMLElement).classList.contains('period');
+    return (this.componentInstance.twelveHourPeriodsEl?.nativeElement as HTMLElement).classList.contains('period');
   }
 
 }
@@ -116,27 +128,27 @@ describe('TimeInputComponent', () => {
       expect(timeInputComponent.getDisplayValue()).toEqual('02:10');
     });
 
-    it('should active the hour part if the control is clicked', ()=>{
+    it('should active the hour part if the control is clicked', () => {
       timeInputComponent.click();
 
       expect(timeInputComponent.isHourInputActiveElement()).toBeTruthy();
     });
 
-    it('should display 22 if 2 is typed twice', ()=>{
+    it('should display 22 if 2 is typed twice', () => {
       timeInputComponent.inputHour('2');
       expect(timeInputComponent.getDisplayValue()).toEqual('02:––');
       timeInputComponent.inputHour('2');
       expect(timeInputComponent.getDisplayValue()).toEqual('22:––');
     });
 
-    it('should active minutes element if the hour element get the input 4 (because 23 is max)', ()=>{
+    it('should active minutes element if the hour element get the input 4 (because 23 is max)', () => {
       timeInputComponent.inputHour('4');
 
       expect(timeInputComponent.isMinutesInputActiveElement()).toBeTruthy();
       expect(timeInputComponent.getDisplayValue()).toEqual('04:––');
     });
 
-    it('should result in 04:02 if 4 and 2 is typed', ()=>{
+    it('should result in 04:02 if 4 and 2 is typed', () => {
       timeInputComponent.inputHour('4');
       timeInputComponent.inputMinute('2');
 
@@ -144,22 +156,23 @@ describe('TimeInputComponent', () => {
       expect(timeInputComponent.getDisplayValue()).toEqual('04:02');
     });
 
-    it('should result in 04:09 if 4 and 9 is typed - and 9 is typed again', ()=>{
+    it('should result in 04:09 if 4 and 9 is typed - and 9 is typed again', () => {
       timeInputComponent.inputHour('4');
       timeInputComponent.inputMinute('9');
       timeInputComponent.inputMinute('9');
 
       expect(timeInputComponent.isMinutesInputActiveElement()).toBeTruthy();
       expect(timeInputComponent.getDisplayValue()).toEqual('04:09');
+      expect(component.time.value).toEqual({hours: 4, minutes: 9} as Time24Hours);
     });
 
-    it('should result in 00:-- if arrow up is pressed on the hour input', ()=>{
+    it('should result in 00:-- if arrow up is pressed on the hour input', () => {
       timeInputComponent.inputHour('ArrowUp');
 
       expect(timeInputComponent.getDisplayValue()).toEqual('00:––');
     });
 
-    it('should increase the hour if arrow up is pressed', ()=>{
+    it('should increase the hour if arrow up is pressed', () => {
       component.time.setValue({hours: 2, minutes: 10} as Time24Hours);
 
       timeInputComponent.inputHour('ArrowUp');
@@ -167,11 +180,9 @@ describe('TimeInputComponent', () => {
       expect(timeInputComponent.getDisplayValue()).toEqual('03:10');
     });
 
-    it('should mark the input as touched if the control los the focus', ()=>{
+    it('should mark the input as touched if the control los the focus', () => {
       expect(component.time.touched).toBeFalsy();
-      timeInputComponent.click();
       timeInputComponent.blur();
-      //fixture.detectChanges();
       expect(component.time.touched).toBeTruthy();
     })
   });
@@ -193,6 +204,15 @@ describe('TimeInputComponent', () => {
       component.time.setValue({hours: 14, minutes: 10} as Time24Hours);
 
       expect(timeInputComponent.getDisplayValue()).toEqual('02:10 PM');
+      expect(component.time.value).toEqual({hours: 14, minutes: 10} as Time24Hours);
+    });
+
+    it('should increase the hour if ArrowUp is typed', () => {
+      component.time.setValue({hours: 14, minutes: 10} as Time24Hours);
+
+      timeInputComponent.inputHour('ArrowUp');
+
+      expect(component.time.value).toEqual({hours: 15, minutes: 10} as Time24Hours);
     });
 
     it('should set time period to AM if a is typed', () => {
@@ -222,17 +242,18 @@ describe('TimeInputComponent', () => {
       expect(timeInputComponent.getDisplayValue()).toEqual('––:–– PM');
     });
 
-    it('should delete the minute if backspace is clicked', ()=>{
+    it('should delete the minute if backspace is clicked', () => {
       component.time.setValue({hours: 14, minutes: 10} as Time24Hours);
       timeInputComponent.inputMinute('Backspace');
       expect(timeInputComponent.getDisplayValue()).toEqual('02:–– PM');
     });
 
-    it('should convert 24 hour input to the correspondig 12 hour', ()=>{
+    it('should convert 24 hour input to the correspondig 12 hour', () => {
       timeInputComponent.inputHour('1');
       timeInputComponent.inputHour('7');
       // 17:00 24 Hours is 5 PM
       expect(timeInputComponent.getDisplayValue()).toEqual('05:–– ––');
+      expect(component.time.value).toBeNull();
     });
 
     it('should activate the hour input if arrow left is typed in minutes', () => {
