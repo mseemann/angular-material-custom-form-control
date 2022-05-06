@@ -19,19 +19,21 @@ const number22DigitString = (n: number): string => n.toLocaleString("de-DE", {
   minimumIntegerDigits: 2
 })
 
-type Parts = {
-  hours: string,
-  minutes: string,
-  twelveHourPeriods: string | null
-}
 
 const EMPTY = '––'; // &#8211; –– en dash
 
-const TWELVE_HOUR_PERIOD_VALUES = ['AM', 'PM'];
+const TWELVE_HOUR_PERIOD_VALUES = ['AM', 'PM'] as const;
 const HOURS_12_HOUR = [...Array(12).keys()].map(hour => hour + 1).map(number22DigitString); // 01..12
 const HOURS_24_HOUR = [...Array(24).keys()].map(number22DigitString); // 00..23
 const MINUTES = [...Array(60).keys()].map(number22DigitString); // 00..59
 const NUMBERS = [...Array(10).keys()].map(String); // 0..9
+
+type Period = typeof TWELVE_HOUR_PERIOD_VALUES[number] | typeof EMPTY | null;
+type Parts = {
+  hours: string,
+  minutes: string,
+  twelveHourPeriods: Period
+}
 
 interface HourModeStrategy {
   convert2Time(parts: Parts): Time24Hours | null;
@@ -62,15 +64,17 @@ class TwelveHourModeStrategy implements HourModeStrategy {
 
   convert2Parts(time: Time24Hours | null): Parts {
     if (time) {
-      const timeString12hr = new Date(`1970-01-01T${number22DigitString(time.hours)}:${number22DigitString(time.minutes)}:00Z`)
-        .toLocaleTimeString('en-US',
-          {timeZone: 'UTC', hour12: true, hour: '2-digit', minute: '2-digit'}
-        );
-      const parts = timeString12hr.match(/(\d{2}):(\d{2}) ([(A|P)M]{2})/);
-      if (!parts) {
-        throw new Error(`${timeString12hr} did not match: hh:mm AP`)
-      }
-      return {hours: parts[1], minutes: parts[2], twelveHourPeriods: parts[3]};
+      let hours = time.hours;
+      let minutes = time.minutes;
+
+      const period = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12; //hour '0' is  '12'
+      return {
+        hours: number22DigitString(hours),
+        minutes: number22DigitString(minutes),
+        twelveHourPeriods: period
+      };
     } else {
       return {hours: EMPTY, minutes: EMPTY, twelveHourPeriods: EMPTY}
     }
@@ -361,7 +365,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
 
   private defaultKeyDownHandler(
     event: KeyboardEvent,
-    possibleInputValues: string[],
+    possibleInputValues: readonly string[],
     currentValue: string,
     previousEl: ElementRef | undefined,
     nextEl: ElementRef | undefined,

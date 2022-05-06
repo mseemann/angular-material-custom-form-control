@@ -68,6 +68,21 @@ class TimeInputComponentObject {
     return (this.componentInstance.twelveHourPeriodsEl?.nativeElement as HTMLElement).classList.contains('period');
   }
 
+  getHourControl(): FormControl {
+    return this.componentInstance.hours;
+  }
+
+  getMinutesControl(): FormControl {
+    return this.componentInstance.minutes;
+  }
+
+  getPeriodControl() {
+    return this.componentInstance.twelveHourPeriods;
+  }
+
+  isRequired() {
+    return this.componentInstance.required;
+  }
 }
 
 @Component({
@@ -108,6 +123,17 @@ describe('TimeInputComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should disable all parts if the contorl ist disabled', ()=>{
+    component.time.disable();
+    expect(timeInputComponent.getHourControl().disabled).toBeTruthy();
+    expect(timeInputComponent.getMinutesControl().disabled).toBeTruthy();
+    expect(timeInputComponent.getPeriodControl().disabled).toBeTruthy();
+  });
+
+  it('should be required if the required validator is configured', ()=>{
+    expect(timeInputComponent.isRequired()).toBeTruthy();
   });
 
   describe('24 hour format', () => {
@@ -266,6 +292,14 @@ describe('TimeInputComponent', () => {
       timeInputComponent.inputMinute('ArrowRight');
 
       expect(timeInputComponent.isPeriodInputActiveElement()).toBeTruthy();
+    });
+
+    it('should convert 12 AM to 0 for 24 hour mode - abd vice versa',()=>{
+      component.time.setValue({hours: 0, minutes: 10} as Time24Hours);
+      expect(timeInputComponent.getDisplayValue()).toEqual('12:10 AM');
+
+      timeInputComponent.inputMinute('ArrowDown');
+      expect(component.time.value).toEqual({hours: 0, minutes: 9} as Time24Hours)
     });
 
   });
