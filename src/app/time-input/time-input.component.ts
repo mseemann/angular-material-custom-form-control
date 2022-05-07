@@ -2,7 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  HostBinding,
+  HostBinding, HostListener,
   Input,
   OnDestroy,
   Optional,
@@ -14,11 +14,9 @@ import {MatFormFieldControl} from "@angular/material/form-field";
 import {Subject} from "rxjs";
 import {BooleanInput, coerceBooleanProperty} from "@angular/cdk/coercion";
 import {Time24Hours} from "../types";
+import {Clipboard} from "@angular/cdk/clipboard";
 
-const number22DigitString = (n: number): string => n.toLocaleString("de-DE", {
-  minimumIntegerDigits: 2
-})
-
+const number22DigitString = (n: number): string => n < 10 ? '0' + n : String(n);
 
 const EMPTY = '––'; // &#8211; –– en dash
 
@@ -45,6 +43,8 @@ interface HourModeStrategy {
   isHoursBufferFull(hoursBuffer: string[]): boolean;
 
   restrictOrConvertHourToMaxValue(hours: number): number;
+
+  getDisplayValue(hourEl: ElementRef | undefined, minuteEl: ElementRef | undefined, period: ElementRef | undefined): string;
 }
 
 class TwelveHourModeStrategy implements HourModeStrategy {
@@ -91,6 +91,10 @@ class TwelveHourModeStrategy implements HourModeStrategy {
   restrictOrConvertHourToMaxValue(hours: number): number {
     return hours <= 12 ? hours : hours - 12;
   }
+
+  getDisplayValue(hourEl: ElementRef | undefined, minuteEl: ElementRef | undefined, period: ElementRef | undefined): string {
+    return `${hourEl?.nativeElement.value}:${minuteEl?.nativeElement.value} ${period?.nativeElement.value}`;
+  }
 }
 
 class TwentyForHourModeStrategy implements HourModeStrategy {
@@ -122,6 +126,10 @@ class TwentyForHourModeStrategy implements HourModeStrategy {
   restrictOrConvertHourToMaxValue(hours: number): number {
     return Math.min(hours, 23);
   }
+
+  getDisplayValue(hourEl: ElementRef | undefined, minuteEl: ElementRef | undefined): string {
+    return `${hourEl?.nativeElement.value}:${minuteEl?.nativeElement.value}`;
+  }
 }
 
 @Component({
@@ -150,11 +158,14 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   focused = false;
 
   private touched = false;
-  private hourModeStrategy = new TwentyForHourModeStrategy();
+  private hourModeStrategy: HourModeStrategy = new TwentyForHourModeStrategy();
   private minutesBuffer: string[] = [];
   private hoursBuffer: string[] = [];
 
-  constructor(@Optional() @Self() public ngControl: NgControl | null, private elementRef: ElementRef) {
+  constructor(
+    @Optional() @Self() public ngControl: NgControl | null,
+    private elementRef: ElementRef,
+    private clipboard: Clipboard) {
     if (this.ngControl != null) {
       this.ngControl.valueAccessor = this;
     }
@@ -209,17 +220,8 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     return (this.ngControl?.invalid || this.parts.invalid) && this.touched;
   }
 
-  private _placeholder: string = '';
-
-  @Input()
-  get placeholder() {
-    return this._placeholder;
-  }
-
-  set placeholder(plh) {
-    this._placeholder = plh;
-    this.stateChanges.next();
-  }
+  // required by MatFormFieldControl - bit this control has no relevant meaning for a placeholder
+  @Input() placeholder: string = '';
 
   @Input()
   get value(): Time24Hours | null {
@@ -285,13 +287,15 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     this.disabled = isDisabled
   }
 
+  @HostListener('copy')
+  copy() {
+    this.clipboard.copy(this.hourModeStrategy.getDisplayValue(this.hoursEl, this.minutesEl, this.twelveHourPeriodsEl));
+  }
+
   hoursKeyDown(event: KeyboardEvent) {
     const {hours} = (this.parts.value as Parts);
     const specialKeyDownHandler = (key: string, currentValue: string): string => {
       if (NUMBERS.includes(event.key)) {
-        if (this.isHoursBufferFull()) {
-          this.resetHoursBuffer();
-        }
         this.hoursBuffer.push(event.key);
         const hours = this.hourModeStrategy.restrictOrConvertHourToMaxValue(Number(this.hoursBuffer.join('')));
 
@@ -374,7 +378,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     if (event.key === 'Tab') {
       return;
     }
-    event.preventDefault();
+    //event.preventDefault();
     const currentIdx = possibleInputValues.indexOf(currentValue);
     let targetValue = currentValue;
     if (event.key === 'Backspace') {

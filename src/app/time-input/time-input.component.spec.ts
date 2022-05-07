@@ -5,6 +5,9 @@ import {Component, DebugElement} from "@angular/core";
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from "@angular/forms";
 import {By} from "@angular/platform-browser";
 import {Time24Hours} from "../types";
+import {MatFormFieldModule, MatLabel} from "@angular/material/form-field";
+import {NoopAnimationsModule} from "@angular/platform-browser/animations";
+import {Clipboard} from "@angular/cdk/clipboard";
 
 class TimeInputComponentObject {
 
@@ -22,10 +25,6 @@ class TimeInputComponentObject {
       timePeriodString = ' ' + timePeriodString;
     }
     return `${hourString}:${minutesString}${timePeriodString}`;
-  }
-
-  click() {
-    this.componentInstance.onContainerClick({target: {tagName: 'div'} as any} as MouseEvent);
   }
 
   blur() {
@@ -83,14 +82,24 @@ class TimeInputComponentObject {
   isRequired() {
     return this.componentInstance.required;
   }
+
+  setRequired() {
+    this.componentInstance.required = true;
+  }
+
+  copyEvent() {
+    this.debugElement.triggerEventHandler('copy', null);
+  }
 }
 
 @Component({
   template: `
     <div [formGroup]="form">
-      <app-time-input [formControl]="time" [twelveHourFormat]="twelveHourFormat"></app-time-input>
+      <mat-form-field>
+        <mat-label>Time</mat-label>
+        <app-time-input [formControl]="time" [twelveHourFormat]="twelveHourFormat"></app-time-input>
+      </mat-form-field>
     </div>
-    <input type="text">
   `
 })
 class TestComponent {
@@ -103,13 +112,19 @@ describe('TimeInputComponent', () => {
   let component: TestComponent;
   let fixture: ComponentFixture<TestComponent>;
   let timeInputComponent: TimeInputComponentObject;
+  let clipboard: Clipboard;
 
   beforeEach(async () => {
+    clipboard = jasmine.createSpyObj<Clipboard>('clipboard', ['copy']);
+
     await TestBed.configureTestingModule({
       declarations: [TimeInputComponent, TestComponent],
       imports: [
-        ReactiveFormsModule
-      ]
+        NoopAnimationsModule,
+        ReactiveFormsModule,
+        MatFormFieldModule
+      ],
+      providers: [{provide: Clipboard, useValue: clipboard}]
     })
       .compileComponents();
   });
@@ -125,15 +140,52 @@ describe('TimeInputComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should disable all parts if the contorl ist disabled', ()=>{
+  it('should disable all parts if the control ist disabled', () => {
     component.time.disable();
     expect(timeInputComponent.getHourControl().disabled).toBeTruthy();
     expect(timeInputComponent.getMinutesControl().disabled).toBeTruthy();
     expect(timeInputComponent.getPeriodControl().disabled).toBeTruthy();
   });
 
-  it('should be required if the required validator is configured', ()=>{
+  it('should enable all parts if the control ist enabled', () => {
+    component.time.enable();
+    expect(timeInputComponent.getHourControl().enabled).toBeTruthy();
+    expect(timeInputComponent.getMinutesControl().enabled).toBeTruthy();
+    expect(timeInputComponent.getPeriodControl().enabled).toBeTruthy();
+  });
+
+  it('should be required if the required validator is configured', () => {
     expect(timeInputComponent.isRequired()).toBeTruthy();
+  });
+
+  it('should be possible to set the required state manually', () => {
+    component.time.clearValidators();
+    expect(timeInputComponent.isRequired()).toBeFalsy();
+    timeInputComponent.setRequired();
+    expect(timeInputComponent.isRequired()).toBeTruthy();
+  });
+
+  it('should keep the hour value if an other key than a number is typed', () => {
+    timeInputComponent.inputHour('1');
+    expect(timeInputComponent.getDisplayValue()).toEqual('01:––');
+
+    timeInputComponent.inputHour('x');
+    expect(timeInputComponent.getDisplayValue()).toEqual('01:––');
+  });
+
+  it('should keep the minute value if an other key than a number is typed', () => {
+    timeInputComponent.inputMinute('1');
+    expect(timeInputComponent.getDisplayValue()).toEqual('––:01');
+
+    timeInputComponent.inputMinute('x');
+    expect(timeInputComponent.getDisplayValue()).toEqual('––:01');
+  });
+
+  it('should activate the next input if tab is typed', () => {
+    fixture.debugElement.query(By.directive(MatLabel)).nativeElement.click();
+
+    timeInputComponent.inputMinute('Tab');
+    expect(timeInputComponent.isMinutesInputActiveElement()).toBeTruthy();
   });
 
   describe('24 hour format', () => {
@@ -154,8 +206,16 @@ describe('TimeInputComponent', () => {
       expect(timeInputComponent.getDisplayValue()).toEqual('02:10');
     });
 
+    it('should copy the display value', () => {
+      component.time.setValue({hours: 2, minutes: 10} as Time24Hours);
+
+      timeInputComponent.copyEvent();
+
+      expect(clipboard.copy).toHaveBeenCalledWith('02:10');
+    });
+
     it('should active the hour part if the control is clicked', () => {
-      timeInputComponent.click();
+      fixture.debugElement.query(By.directive(MatLabel)).nativeElement.click();
 
       expect(timeInputComponent.isHourInputActiveElement()).toBeTruthy();
     });
@@ -233,6 +293,14 @@ describe('TimeInputComponent', () => {
       expect(component.time.value).toEqual({hours: 14, minutes: 10} as Time24Hours);
     });
 
+    it('should copy the display value', () => {
+      component.time.setValue({hours: 14, minutes: 10} as Time24Hours);
+
+      timeInputComponent.copyEvent();
+
+      expect(clipboard.copy).toHaveBeenCalledWith('02:10 PM');
+    });
+
     it('should increase the hour if ArrowUp is typed', () => {
       component.time.setValue({hours: 14, minutes: 10} as Time24Hours);
 
@@ -294,7 +362,7 @@ describe('TimeInputComponent', () => {
       expect(timeInputComponent.isPeriodInputActiveElement()).toBeTruthy();
     });
 
-    it('should convert 12 AM to 0 for 24 hour mode - abd vice versa',()=>{
+    it('should convert 12 AM to 0 for 24 hour mode - abd vice versa', () => {
       component.time.setValue({hours: 0, minutes: 10} as Time24Hours);
       expect(timeInputComponent.getDisplayValue()).toEqual('12:10 AM');
 
