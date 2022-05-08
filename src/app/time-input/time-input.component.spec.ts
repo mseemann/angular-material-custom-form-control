@@ -94,6 +94,18 @@ class TimeInputComponentObject {
   activateHourElement() {
     this.debugElement.queryAll(By.css('input'))[0].nativeElement.focus();
   }
+
+  isDisabled() {
+    return this.componentInstance.hours.disabled
+      && this.componentInstance.minutes.disabled
+      && this.componentInstance.twelveHourPeriods.disabled;
+  }
+
+  isEnabled() {
+    return this.componentInstance.hours.enabled
+      && this.componentInstance.minutes.enabled
+      && this.componentInstance.twelveHourPeriods.enabled;
+  }
 }
 
 @Component({
@@ -146,16 +158,12 @@ describe('TimeInputComponent', () => {
 
   it('should disable all parts if the control ist disabled', () => {
     component.time.disable();
-    expect(timeInputComponent.getHourControl().disabled).toBeTruthy();
-    expect(timeInputComponent.getMinutesControl().disabled).toBeTruthy();
-    expect(timeInputComponent.getPeriodControl().disabled).toBeTruthy();
+    expect(timeInputComponent.isDisabled()).toBeTruthy();
   });
 
   it('should enable all parts if the control ist enabled', () => {
     component.time.enable();
-    expect(timeInputComponent.getHourControl().enabled).toBeTruthy();
-    expect(timeInputComponent.getMinutesControl().enabled).toBeTruthy();
-    expect(timeInputComponent.getPeriodControl().enabled).toBeTruthy();
+    expect(timeInputComponent.isEnabled()).toBeTruthy();
   });
 
   it('should be required if the required validator is configured', () => {
@@ -185,10 +193,22 @@ describe('TimeInputComponent', () => {
     expect(timeInputComponent.getDisplayValue()).toEqual('––:01');
   });
 
-  it('should keep the tab behaviour for the input controls', ()=>{
+  it('should keep the tab behaviour for the input controls', () => {
     timeInputComponent.activateHourElement();
     timeInputComponent.inputHour('Tab');
     expect(timeInputComponent.isMinutesInputActiveElement).toBeTruthy();
+  });
+
+  it('should active the hour part if the control is clicked', () => {
+    fixture.debugElement.query(By.directive(MatLabel)).nativeElement.click();
+
+    expect(timeInputComponent.isHourInputActiveElement()).toBeTruthy();
+  });
+
+  it('should mark the input as touched if the control los the focus', () => {
+    expect(component.time.touched).toBeFalsy();
+    timeInputComponent.blur();
+    expect(component.time.touched).toBeTruthy();
   });
 
   describe('24 hour format', () => {
@@ -215,12 +235,6 @@ describe('TimeInputComponent', () => {
       timeInputComponent.copyEvent();
 
       expect(clipboard.copy).toHaveBeenCalledWith('02:10');
-    });
-
-    it('should active the hour part if the control is clicked', () => {
-      fixture.debugElement.query(By.directive(MatLabel)).nativeElement.click();
-
-      expect(timeInputComponent.isHourInputActiveElement()).toBeTruthy();
     });
 
     it('should display 22 if 2 is typed twice', () => {
@@ -268,12 +282,6 @@ describe('TimeInputComponent', () => {
 
       expect(timeInputComponent.getDisplayValue()).toEqual('03:10');
     });
-
-    it('should mark the input as touched if the control los the focus', () => {
-      expect(component.time.touched).toBeFalsy();
-      timeInputComponent.blur();
-      expect(component.time.touched).toBeTruthy();
-    })
   });
 
   describe('12 hour format', () => {
