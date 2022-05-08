@@ -375,10 +375,10 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     nextEl: ElementRef | undefined,
     specialKeyDownHandler: (key: string, currentValue: string) => string,
     createPatchValue: (value: string) => Partial<Parts>) {
-    if (event.key === 'Tab') {
+    if (event.key === 'Tab' || event.ctrlKey || event.metaKey) {
       return;
     }
-    //event.preventDefault();
+    event.preventDefault();
     const currentIdx = possibleInputValues.indexOf(currentValue);
     let targetValue = currentValue;
     if (event.key === 'Backspace') {
