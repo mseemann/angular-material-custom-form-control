@@ -2,7 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  HostBinding, HostListener,
+  HostBinding,
+  HostListener,
   Input,
   OnDestroy,
   Optional,
@@ -143,7 +144,7 @@ class TwentyForHourModeStrategy implements HourModeStrategy {
 export class TimeInputComponent implements ControlValueAccessor, MatFormFieldControl<Time24Hours | null>, OnDestroy {
   static nextId = 0;
 
-  readonly hours = new FormControl();
+  readonly hours = new FormControl(); // add validator '' and -- are invalid ??
   readonly minutes = new FormControl();
   readonly twelveHourPeriods = new FormControl();
   readonly parts = new FormGroup({
@@ -226,7 +227,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   }
 
   // required by MatFormFieldControl - but this control has no relevant meaning for a placeholder,
-  // so we do not provide it as an  input property
+  // so we do not provide it as an input property
   placeholder: string = '';
 
   @Input()
@@ -315,7 +316,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     this.defaultKeyDownHandler(
       event,
       this.twelveHourFormat ? HOURS_12_HOUR : HOURS_24_HOUR,
-      hours ?? '',
+      hours,
       undefined,
       this.minutesEl,
       specialKeyDownHandler,
@@ -343,7 +344,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     this.defaultKeyDownHandler(
       event,
       MINUTES,
-      minutes ?? '',
+      minutes,
       this.hoursEl,
       this.twelveHourPeriodsEl,
       specialKeyDownHandler,
