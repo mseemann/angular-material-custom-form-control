@@ -16,14 +16,14 @@ import {BooleanInput, coerceBooleanProperty} from "@angular/cdk/coercion";
 import {Time24Hours} from "../types";
 import {Clipboard} from "@angular/cdk/clipboard";
 
-const number22DigitString = (n: number): string => n < 10 ? '0' + n : String(n);
+const number2TwoDigitString = (n: number): string => n < 10 ? '0' + n : String(n);
 
 const EMPTY = '––'; // &#8211; –– en dash
 
 const TWELVE_HOUR_PERIOD_VALUES = ['AM', 'PM'] as const;
-const HOURS_12_HOUR = [...Array(12).keys()].map(hour => hour + 1).map(number22DigitString); // 01..12
-const HOURS_24_HOUR = [...Array(24).keys()].map(number22DigitString); // 00..23
-const MINUTES = [...Array(60).keys()].map(number22DigitString); // 00..59
+const HOURS_12_HOUR = [...Array(12).keys()].map(hour => hour + 1).map(number2TwoDigitString); // 01..12
+const HOURS_24_HOUR = [...Array(24).keys()].map(number2TwoDigitString); // 00..23
+const MINUTES = [...Array(60).keys()].map(number2TwoDigitString); // 00..59
 const NUMBERS = [...Array(10).keys()].map(String); // 0..9
 
 type Period = typeof TWELVE_HOUR_PERIOD_VALUES[number] | typeof EMPTY | null;
@@ -71,8 +71,8 @@ class TwelveHourModeStrategy implements HourModeStrategy {
       hours = hours % 12;
       hours = hours ? hours : 12; //hour '0' is  '12'
       return {
-        hours: number22DigitString(hours),
-        minutes: number22DigitString(minutes),
+        hours: number2TwoDigitString(hours),
+        minutes: number2TwoDigitString(minutes),
         twelveHourPeriods: period
       };
     } else {
@@ -106,8 +106,8 @@ class TwentyForHourModeStrategy implements HourModeStrategy {
   convert2Parts(time: Time24Hours | null): Parts {
     if (time) {
       return {
-        hours: number22DigitString(time.hours),
-        minutes: number22DigitString(time.minutes),
+        hours: number2TwoDigitString(time.hours),
+        minutes: number2TwoDigitString(time.minutes),
         twelveHourPeriods: null
       }
     } else {
@@ -300,7 +300,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
         this.hoursBuffer.push(event.key);
         const hours = this.hourModeStrategy.restrictOrConvertHourToMaxValue(Number(this.hoursBuffer.join('')));
 
-        const targetValue = number22DigitString(hours);
+        const targetValue = number2TwoDigitString(hours);
         if (this.isHoursBufferFull()) {
           this.minutesEl?.nativeElement.focus();
         }
@@ -328,7 +328,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
         }
         this.minutesBuffer.push(event.key);
         const minutes = Number(this.minutesBuffer.join(''));
-        const targetValue = number22DigitString(minutes);
+        const targetValue = number2TwoDigitString(minutes);
         if (this.isMinuteBufferFull()) {
           this.twelveHourPeriodsEl?.nativeElement.focus();
         }
