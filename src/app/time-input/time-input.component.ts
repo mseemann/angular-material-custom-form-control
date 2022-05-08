@@ -145,7 +145,11 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   readonly hours = new FormControl();
   readonly minutes = new FormControl();
   readonly twelveHourPeriods = new FormControl();
-  readonly parts = new FormGroup({hours: this.hours, minutes: this.minutes, twelveHourPeriods: this.twelveHourPeriods});
+  readonly parts = new FormGroup({
+    hours: this.hours,
+    minutes: this.minutes,
+    twelveHourPeriods: this.twelveHourPeriods
+  });
   readonly stateChanges = new Subject<void>();
 
   @HostBinding() readonly id = `app-time-input-${TimeInputComponent.nextId++}`;
