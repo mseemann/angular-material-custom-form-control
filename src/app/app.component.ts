@@ -1,11 +1,12 @@
-import {Component} from '@angular/core';
+import {ChangeDetectionStrategy, Component} from '@angular/core';
 import {FormControl, FormGroup, Validators} from "@angular/forms";
 import {Time24Hours} from "./types";
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppComponent {
   simpleTime: string|undefined;
@@ -23,17 +24,11 @@ export class AppComponent {
     })
   }
 
-  getNameErrorMessage(): string {
+  getErrorMessage(): string {
     if (this.name.hasError('required')) {
       return 'You must enter a value';
     }
     return '';
   }
 
-  getTimeErrorMessage(): string {
-    if (this.time.hasError('required')) {
-      return 'You must enter a value';
-    }
-    return '';
-  }
 }

@@ -15,6 +15,7 @@ import {Subject} from "rxjs";
 import {BooleanInput, coerceBooleanProperty} from "@angular/cdk/coercion";
 import {Time24Hours} from "../types";
 import {Clipboard} from "@angular/cdk/clipboard";
+import {ON_CHANGE_DEFAULT, ON_TOUCH_DEFAULT} from "../strict-util";
 
 const number2TwoDigitString = (n: number): string => n < 10 ? '0' + n : String(n);
 
@@ -242,11 +243,9 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     return this.hourModeStrategy.isEmpty(this.parts.value);
   }
 
-  onChange = (_: any) => {
-  };
+  onChange = ON_CHANGE_DEFAULT;
 
-  onTouched = () => {
-  };
+  onTouched = ON_TOUCH_DEFAULT;
 
   onFocusIn() {
     this.focused = true;
