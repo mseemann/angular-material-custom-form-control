@@ -220,8 +220,9 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     return (this.ngControl?.invalid || this.parts.invalid) && this.touched;
   }
 
-  // required by MatFormFieldControl - bit this control has no relevant meaning for a placeholder
-  @Input() placeholder: string = '';
+  // required by MatFormFieldControl - but this control has no relevant meaning for a placeholder,
+  // so we do not provide it as an  input property
+  placeholder: string = '';
 
   @Input()
   get value(): Time24Hours | null {
