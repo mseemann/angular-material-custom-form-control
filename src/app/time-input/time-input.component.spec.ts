@@ -56,15 +56,15 @@ class TimeInputComponentObject {
   }
 
   isHourInputActiveElement() {
-    return (this.componentInstance.hoursEl?.nativeElement as HTMLElement).classList.contains('hours');
+    return window.document.activeElement === this.debugElement.queryAll(By.css('input'))[0].nativeElement;
   }
 
   isMinutesInputActiveElement() {
-    return (this.componentInstance.minutesEl?.nativeElement as HTMLElement).classList.contains('minutes');
+    return window.document.activeElement === this.debugElement.queryAll(By.css('input'))[1].nativeElement;
   }
 
   isPeriodInputActiveElement() {
-    return (this.componentInstance.twelveHourPeriodsEl?.nativeElement as HTMLElement).classList.contains('period');
+    return window.document.activeElement === this.debugElement.queryAll(By.css('input'))[2].nativeElement;
   }
 
   getHourControl(): FormControl {
@@ -89,6 +89,10 @@ class TimeInputComponentObject {
 
   copyEvent() {
     this.debugElement.triggerEventHandler('copy', null);
+  }
+
+  activateHourElement() {
+    this.debugElement.queryAll(By.css('input'))[0].nativeElement.focus();
   }
 }
 
@@ -181,11 +185,10 @@ describe('TimeInputComponent', () => {
     expect(timeInputComponent.getDisplayValue()).toEqual('––:01');
   });
 
-  it('should activate the next input if tab is typed', () => {
-    fixture.debugElement.query(By.directive(MatLabel)).nativeElement.click();
-
-    timeInputComponent.inputMinute('Tab');
-    expect(timeInputComponent.isMinutesInputActiveElement()).toBeTruthy();
+  it('should keep the tab behaviour for the input controls', ()=>{
+    timeInputComponent.activateHourElement();
+    timeInputComponent.inputHour('Tab');
+    expect(timeInputComponent.isMinutesInputActiveElement).toBeTruthy();
   });
 
   describe('24 hour format', () => {
@@ -329,20 +332,19 @@ describe('TimeInputComponent', () => {
       expect(timeInputComponent.getDisplayValue()).toEqual('––:–– PM');
     });
 
-    it('should set time period to PM if a is typed and then ArrowDown', () => {
-      timeInputComponent.inputTimePeriod('a');
+    it('should set time period to PM if  ArrowDown is typed', () => {
       timeInputComponent.inputTimePeriod('ArrowDown');
 
       expect(timeInputComponent.getDisplayValue()).toEqual('––:–– PM');
     });
 
-    it('should delete the minute if backspace is clicked', () => {
+    it('should delete the minute if backspace is typed', () => {
       component.time.setValue({hours: 14, minutes: 10} as Time24Hours);
       timeInputComponent.inputMinute('Backspace');
       expect(timeInputComponent.getDisplayValue()).toEqual('02:–– PM');
     });
 
-    it('should convert 24 hour input to the correspondig 12 hour', () => {
+    it('should convert 24 hour input to the corresponding 12 hour', () => {
       timeInputComponent.inputHour('1');
       timeInputComponent.inputHour('7');
       // 17:00 24 Hours is 5 PM
@@ -353,7 +355,7 @@ describe('TimeInputComponent', () => {
     it('should activate the hour input if arrow left is typed in minutes', () => {
       timeInputComponent.inputMinute('ArrowLeft');
 
-      expect(timeInputComponent.isMinutesInputActiveElement()).toBeTruthy();
+      expect(timeInputComponent.isHourInputActiveElement()).toBeTruthy();
     });
 
     it('should activate the period input if arrow right is typed in minutes', () => {

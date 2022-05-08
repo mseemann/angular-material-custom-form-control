@@ -3,14 +3,14 @@
      #containerEl
      (focusin)="onFocusIn()"
      (focusout)="onFocusOut($event)">
-  <input [formControl]="hours" maxlength="2" size="2" class="hours" #hoursEl (focus)="resetHoursBuffer()"
+  <input [formControl]="hours" maxlength="2" size="2" #hoursEl (focus)="resetHoursBuffer()"
          (keydown)="hoursKeyDown($event)">
   <span>:</span>
-  <input [formControl]="minutes" maxlength="2" size="2" class="minutes" #minutesEl (focus)="resetMinutesBuffer()"
+  <input [formControl]="minutes" maxlength="2" size="2" #minutesEl (focus)="resetMinutesBuffer()"
          (keydown)="minutesKeyDown($event)">
   <ng-container *ngIf="twelveHourFormat">
     <span class="spacer"></span>
-    <input [formControl]="twelveHourPeriods" maxlength="2" size="2" class="period" (keydown)="twelveHourPeriodKeyDown($event)"
+    <input [formControl]="twelveHourPeriods" maxlength="2" size="2" (keydown)="twelveHourPeriodKeyDown($event)"
            #twelveHourPeriodsEl>
   </ng-container>
 </div>
