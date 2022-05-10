@@ -16,7 +16,7 @@ import {Subject} from "rxjs";
 import {BooleanInput, coerceBooleanProperty} from "@angular/cdk/coercion";
 import {Time24Hours} from "../types";
 import {Clipboard} from "@angular/cdk/clipboard";
-import {ON_CHANGE_DEFAULT, ON_TOUCH_DEFAULT} from "../strict-util";
+import {DUMMY_ELEMENT_REF, ON_CHANGE_DEFAULT, ON_TOUCH_DEFAULT} from "../strict-util";
 
 const number2TwoDigitString = (n: number): string => n < 10 ? '0' + n : String(n);
 
@@ -28,7 +28,7 @@ const HOURS_24_HOUR = [...Array(24).keys()].map(number2TwoDigitString); // 00..2
 const MINUTES = [...Array(60).keys()].map(number2TwoDigitString); // 00..59
 const NUMBERS = [...Array(10).keys()].map(String); // 0..9
 
-type Period = typeof TWELVE_HOUR_PERIOD_VALUES[number] | typeof EMPTY | null;
+type Period = typeof TWELVE_HOUR_PERIOD_VALUES[number] | typeof EMPTY;
 type Parts = {
   hours: string,
   minutes: string,
@@ -46,7 +46,7 @@ interface HourModeStrategy {
 
   restrictOrConvertHourToMaxValue(hours: number): number;
 
-  getDisplayValue(hourEl: ElementRef | undefined, minuteEl: ElementRef | undefined, period: ElementRef | undefined): string;
+  getDisplayValue(hourEl: ElementRef, minuteEl: ElementRef, period: ElementRef | undefined): string;
 }
 
 class TwelveHourModeStrategy implements HourModeStrategy {
@@ -94,8 +94,8 @@ class TwelveHourModeStrategy implements HourModeStrategy {
     return hours <= 12 ? hours : hours - 12;
   }
 
-  getDisplayValue(hourEl: ElementRef | undefined, minuteEl: ElementRef | undefined, period: ElementRef | undefined): string {
-    return `${hourEl?.nativeElement.value}:${minuteEl?.nativeElement.value} ${period?.nativeElement.value}`;
+  getDisplayValue(hourEl: ElementRef, minuteEl: ElementRef, period: ElementRef | undefined): string {
+    return `${hourEl.nativeElement.value}:${minuteEl.nativeElement.value} ${period?.nativeElement.value}`;
   }
 }
 
@@ -110,10 +110,10 @@ class TwentyForHourModeStrategy implements HourModeStrategy {
       return {
         hours: number2TwoDigitString(time.hours),
         minutes: number2TwoDigitString(time.minutes),
-        twelveHourPeriods: null
+        twelveHourPeriods: EMPTY
       }
     } else {
-      return {hours: EMPTY, minutes: EMPTY, twelveHourPeriods: null}
+      return {hours: EMPTY, minutes: EMPTY, twelveHourPeriods: EMPTY}
     }
   }
 
@@ -129,8 +129,8 @@ class TwentyForHourModeStrategy implements HourModeStrategy {
     return Math.min(hours, 23);
   }
 
-  getDisplayValue(hourEl: ElementRef | undefined, minuteEl: ElementRef | undefined): string {
-    return `${hourEl?.nativeElement.value}:${minuteEl?.nativeElement.value}`;
+  getDisplayValue(hourEl: ElementRef, minuteEl: ElementRef): string {
+    return `${hourEl.nativeElement.value}:${minuteEl.nativeElement.value}`;
   }
 }
 
@@ -144,7 +144,7 @@ class TwentyForHourModeStrategy implements HourModeStrategy {
 export class TimeInputComponent implements ControlValueAccessor, MatFormFieldControl<Time24Hours | null>, OnDestroy {
   static nextId = 0;
 
-  readonly hours = new FormControl(); // add validator '' and -- are invalid ??
+  readonly hours = new FormControl();
   readonly minutes = new FormControl();
   readonly twelveHourPeriods = new FormControl();
   readonly parts = new FormGroup({
@@ -156,10 +156,10 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
 
   @HostBinding() readonly id = `app-time-input-${TimeInputComponent.nextId++}`;
 
-  @ViewChild('containerEl', {static: true}) containerEl: ElementRef | undefined;
-  @ViewChild('hoursEl', {static: true}) hoursEl: ElementRef | undefined;
+  @ViewChild('containerEl', {static: true}) containerEl: ElementRef = DUMMY_ELEMENT_REF;
+  @ViewChild('hoursEl', {static: true}) hoursEl: ElementRef = DUMMY_ELEMENT_REF;
   @ViewChild('twelveHourPeriodsEl', {static: false}) twelveHourPeriodsEl: ElementRef | undefined;
-  @ViewChild('minutesEl', {static: true}) minutesEl: ElementRef | undefined;
+  @ViewChild('minutesEl', {static: true}) minutesEl: ElementRef = DUMMY_ELEMENT_REF;
 
   focused = false;
 
@@ -223,7 +223,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
   }
 
   get errorState(): boolean {
-    return (this.ngControl?.invalid || this.parts.invalid) && this.touched;
+    return (this.ngControl?.invalid ?? false) && this.touched;
   }
 
   // required by MatFormFieldControl - but this control has no relevant meaning for a placeholder,
@@ -280,12 +280,12 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
 
   onContainerClick(event: MouseEvent) {
     if ((event.target as Element).tagName.toLowerCase() != 'input') {
-      this.hoursEl?.nativeElement.focus();
+      this.hoursEl.nativeElement.focus();
     }
   }
 
   setDescribedByIds(ids: string[]) {
-    this.containerEl?.nativeElement.setAttribute('aria-describedby', ids.join(' '));
+    this.containerEl.nativeElement.setAttribute('aria-describedby', ids.join(' '));
   }
 
   setDisabledState(isDisabled: boolean) {
@@ -306,7 +306,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
 
         const targetValue = number2TwoDigitString(hours);
         if (this.isHoursBufferFull()) {
-          this.minutesEl?.nativeElement.focus();
+          this.minutesEl.nativeElement.focus();
         }
         return targetValue;
       }
@@ -365,7 +365,7 @@ export class TimeInputComponent implements ControlValueAccessor, MatFormFieldCon
     this.defaultKeyDownHandler(
       event,
       TWELVE_HOUR_PERIOD_VALUES,
-      twelveHourPeriods ?? '',
+      twelveHourPeriods,
       this.minutesEl,
       undefined,
       specialKeyDownHandler,

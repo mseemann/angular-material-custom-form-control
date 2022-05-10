@@ -207,6 +207,19 @@ describe('TimeInputComponent', () => {
     expect(component.time.touched).toBeTruthy();
   });
 
+  it('should keep the cursor in the hour filed if ArrowLeft is typed in the hour filed', ()=>{
+    timeInputComponent.activateHourElement();
+    timeInputComponent.inputHour('ArrowLeft');
+    expect(timeInputComponent.isHourInputActiveElement()).toBeTruthy();
+  });
+
+  it('should keep the cursor in the minute filed if ArrowRight is typed in the minute filed', ()=>{
+    timeInputComponent.activateHourElement();
+    timeInputComponent.inputHour('ArrowRight');
+    timeInputComponent.inputMinute('ArrowRight');
+    expect(timeInputComponent.isMinutesInputActiveElement()).toBeTruthy();
+  });
+
   describe('24 hour format', () => {
 
     beforeEach(() => {
@@ -362,7 +375,7 @@ describe('TimeInputComponent', () => {
       expect(timeInputComponent.isHourInputActiveElement()).toBeTruthy();
     });
 
-    it('should activate the perio input if 9 is typed in minutes', () => {
+    it('should activate the period input if 9 is typed in minutes', () => {
       timeInputComponent.inputMinute('9');
 
       expect(timeInputComponent.isPeriodInputActiveElement()).toBeTruthy();
